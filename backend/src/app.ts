@@ -2,6 +2,7 @@ import express, { Express, Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
+import { getFirebaseStatus } from './config/firebase'
 
 /**
  * Create and configure Express application
@@ -31,13 +32,30 @@ export function createApp(): Express {
   app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
   // Health check endpoint
-  app.get('/health', (req: Request, res: Response) => {
-    res.status(200).json({
-      status: 'ok',
-      service: 'Restaurant Management Backend',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-    })
+  app.get('/health', async (req: Request, res: Response) => {
+    try {
+      const firebaseStatus = await getFirebaseStatus()
+      
+      res.status(200).json({
+        status: 'ok',
+        service: 'Restaurant Management Backend',
+        version: '1.0.0',
+        server: 'running',
+        firebase: firebaseStatus.firebase,
+        firestore: firebaseStatus.firestore,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        service: 'Restaurant Management Backend',
+        version: '1.0.0',
+        server: 'running',
+        firebase: 'error',
+        firestore: 'error',
+        timestamp: new Date().toISOString(),
+      })
+    }
   })
 
   // Basic error handler
