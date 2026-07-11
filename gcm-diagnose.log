@@ -1,0 +1,169 @@
+﻿Diagnose log at 2026-07-11T12:21:24Z
+
+AppPath: C:\Program Files\Git\mingw64\bin\git-credential-manager.exe
+InstallDir: C:\Program Files\Git\mingw64\bin\
+Version: 2.7.3+5fa7116896c82164996a609accd1c5ad90fe730a
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 26200)
+Reading environment variables... OK
+ Variables:
+OneDriveConsumer=C:\Users\ar774\OneDrive
+ProgramFiles(x86)=C:\Program Files (x86)
+MSYSTEM=MINGW64
+ProgramW6432=C:\Program Files
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 165 Stepping 3, GenuineIntel
+TMP=C:\Users\ar774\AppData\Local\Temp
+PROCESSOR_ARCHITECTURE=AMD64
+VSCODE_GIT_ASKPASS_MAIN=c:\Users\ar774\AppData\Local\Programs\Kiro\resources\app\extensions\git\dist\askpass-main.js
+Path=C:/Program Files/Git/mingw64/libexec/git-core;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\SPB_Data\bin;C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\flutter\flutter\bin;C:\Program Files\nodejs\;C:\Program Files\Git\cmd;C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\flutter\flutter\bin;C:\Program Files\nodejs\;C:\Users\ar774\AppData\Local\Microsoft\WindowsApps;C:\Users\ar774\AppData\Local\Programs\Microsoft VS Code\bin;C:\Program Files\flutter\bin;C:\Users\ar774\AppData\Local\Programs\Kiro\bin;C:\Users\ar774\AppData\Roaming\npm;C:\Users\ar774\AppData\Local\Android\Sdk\platform-tools;C:\Users\ar774\AppData\Local\Programs\Qoder\bin;C:\Users\ar774\AppData\Local\Programs\Antigravity IDE\bin
+VSCODE_GIT_IPC_HANDLE=\\.\pipe\vscode-git-938430cb50-sock
+PROCESSOR_REVISION=a503
+TEMP=C:\Users\ar774\AppData\Local\Temp
+USERPROFILE=C:\Users\ar774
+LOGONSERVER=\\DESKTOP-UP4734Q
+TERM=xterm-256color
+USERNAME=ar774
+SystemRoot=C:\WINDOWS
+CHROME_CRASHPAD_PIPE_NAME=\\.\pipe\crashpad_9748_OLSJKCKWANNQSLXH
+GIT_EXEC_PATH=C:/Program Files/Git/mingw64/libexec/git-core
+PLINK_PROTOCOL=ssh
+OneDrive=C:\Users\ar774\OneDrive
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+COLORTERM=truecolor
+VSCODE_PYTHON_AUTOACTIVATE_GUARD=1
+PROCESSOR_LEVEL=6
+EFC_5892_2946480783=1
+ProgramData=C:\ProgramData
+LANG=en_US.UTF-8
+GIT_ASKPASS=c:\Users\ar774\AppData\Local\Programs\Kiro\resources\app\extensions\git\dist\askpass.sh
+HOMEPATH=\Users\ar774
+CDS_LIC_FILE=5280@localhost
+VSCODE_INJECTION=1
+ALLUSERSPROFILE=C:\ProgramData
+CommonProgramW6432=C:\Program Files\Common Files
+allegro_license_mode=single_user_licensing
+EFC_5892_344590478=1
+SESSIONNAME=Console
+DriverData=C:\Windows\System32\Drivers\DriverData
+HOMEDRIVE=C:
+windir=C:\WINDOWS
+GIT_TRACE2_PARENT_SID=6ce27ed3-7a9b-40a5-8a4a-d1d27f66bd89
+SystemDrive=C:
+NUMBER_OF_PROCESSORS=12
+OS=Windows_NT
+EFC_5892_1592913036=1
+ProgramFiles=C:\Program Files
+ComSpec=C:\WINDOWS\system32\cmd.exe
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+HOME=C:\SPB_Data
+CommonProgramFiles=C:\Program Files\Common Files
+PSModulePath=C:\Users\ar774\Documents\WindowsPowerShell\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
+TMPDIR=C:\Users\ar774\AppData\Local\Temp
+APPDATA=C:\Users\ar774\AppData\Roaming
+USERDOMAIN=DESKTOP-UP4734Q
+COMPUTERNAME=DESKTOP-UP4734Q
+LOCALAPPDATA=C:\Users\ar774\AppData\Local
+VSCODE_GIT_ASKPASS_NODE=C:\Users\ar774\AppData\Local\Programs\Kiro\Kiro.exe
+EFC_5892_4126798990=1
+TERM_PROGRAM_VERSION=0.12.333
+USERDOMAIN_ROAMINGPROFILE=DESKTOP-UP4734Q
+CDS_LIC_ONLY=1
+PUBLIC=C:\Users\Public
+TERM_PROGRAM=kiro
+VSCODE_GIT_ASKPASS_EXTRA_ARGS=
+ANDROID_HOME=C:\Users\ar774\AppData\Local\Android\Sdk
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\ar774\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\ar774\AppData\Local\Temp\afc847f3bc3b0486faa83dbe'... OK
+Reading from temporary file 'C:\Users\ar774\AppData\Local\Temp\afc847f3bc3b0486faa83dbe'... OK
+Deleting temporary file 'C:\Users\ar774\AppData\Local\Temp\afc847f3bc3b0486faa83dbe'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\ar774
+UserDataDirectoryPath: C:\Users\ar774\.gcm
+GetCurrentDirectory(): C:\Users\ar774\Desktop\RMS\Restaurant-management-master
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: False
+Exception:
+System.Net.Http.HttpRequestException: An error occurred while sending the request. ---> System.Net.WebException: The remote name could not be resolved: 'example.com'
+   at System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   at System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- End of inner exception stack trace ---
+   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at GitCredentialManager.Diagnostics.NetworkingDiagnostic.<RunInternalAsync>d__4.MoveNext()
+--- End of stack trace from previous location where exception was thrown ---
+   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at GitCredentialManager.Diagnostics.Diagnostic.<RunAsync>d__6.MoveNext()
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com...Sending HEAD request to https://example.com... warning: HEAD request failed
+Sending HEAD request to http://httpforever.com...
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.54.0.windows.1'
+Locating current repository...Git repository at 'C:/Users/ar774/Desktop/RMS/Restaurant-management-master/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:C:/Program Files/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.required=true
+file:C:/Program Files/Git/etc/gitconfig	http.sslbackend=schannel
+file:C:/Program Files/Git/etc/gitconfig	core.autocrlf=true
+file:C:/Program Files/Git/etc/gitconfig	core.fscache=true
+file:C:/Program Files/Git/etc/gitconfig	core.symlinks=false
+file:C:/Program Files/Git/etc/gitconfig	pull.rebase=false
+file:C:/Program Files/Git/etc/gitconfig	credential.helper=manager
+file:C:/Program Files/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:C:/Program Files/Git/etc/gitconfig	init.defaultbranch=master
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.symlinks=false
+file:.git/config	core.ignorecase=true
+file:.git/config	user.email=hexervehrms@gmail.com
+file:.git/config	user.name=hexervehrms-cyber
+file:.git/config	remote.origin.url=https://github.com/hexervehrms-cyber/Restaurant-management.git
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+
