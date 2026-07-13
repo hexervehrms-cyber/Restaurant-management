@@ -6,13 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { CustomerRepository } from '@/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
 
-const prisma = new PrismaClient()
+const customerRepo = new CustomerRepository()
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,15 +27,10 @@ export async function POST(request: NextRequest) {
     const tenantContext = extractTenantContext(authContext)
 
     // Check if customer already exists with this phone
-    const existingCustomer = await prisma.customer.findFirst({
-      where: {
-        organizationId: tenantContext.organizationId,
-        phone: phone,
-        deletedAt: null,
-      },
-    })
-
-    if (existingCustomer) {
+    const existingCustomers = await customerRepo.findByPhone(tenantContext.organizationId, phone)
+    
+    if (existingCustomers && existingCustomers.length > 0) {
+      const existingCustomer = existingCustomers[0]
       return NextResponse.json(successResponse({
         id: existingCustomer.id,
         phone: existingCustomer.phone,
@@ -46,15 +41,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new customer
-    const newCustomer = await prisma.customer.create({
-      data: {
+    const result = await customerRepo.create(
+      {
         organizationId: tenantContext.organizationId,
         phone: phone,
-        firstName: firstName || null,
-        lastName: lastName || null,
-        email: email || null,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        email: email || undefined,
+        name: `${firstName || ''} ${lastName || ''}`.trim(),
+        tier: 'silver',
       },
-    })
+      authContext.userId,
+      tenantContext.organizationId
+    )
+
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Failed to create customer')
+    }
+
+    const newCustomer = result.data
 
     return NextResponse.json(
       successResponse({

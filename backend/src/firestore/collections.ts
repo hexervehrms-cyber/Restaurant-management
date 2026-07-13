@@ -48,6 +48,8 @@ export const COLLECTIONS = {
   inventoryMovements: 'inventoryMovements',
   purchaseOrders: 'purchaseOrders',
   purchaseOrderItems: 'purchaseOrderItems',
+  stockAdjustments: 'stockAdjustments',
+  lowStockAlerts: 'lowStockAlerts',
   cashRegisters: 'cashRegisters',
   cashSessions: 'cashSessions',
   dailySummaries: 'dailySummaries',
@@ -70,6 +72,8 @@ export const SUBCOLLECTION_PATHS = {
   customerAddresses: (customerId: string) => `${COLLECTIONS.customers}/${customerId}/addresses`,
   customerNotes: (customerId: string) => `${COLLECTIONS.customers}/${customerId}/notes`,
   customerLoyaltyPoints: (customerId: string) => `${COLLECTIONS.customers}/${customerId}/loyalty_points`,
+  reservationPayments: (reservationId: string) => `${COLLECTIONS.reservations}/${reservationId}/payments`,
+  reservationNoShowLogs: (reservationId: string) => `${COLLECTIONS.reservations}/${reservationId}/noShowLogs`,
 } as const
 
 /**

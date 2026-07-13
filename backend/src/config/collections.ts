@@ -48,6 +48,8 @@ export const COLLECTIONS = {
   inventoryMovements: 'inventoryMovements',
   purchaseOrders: 'purchaseOrders',
   purchaseOrderItems: 'purchaseOrderItems',
+  stockAdjustments: 'stockAdjustments',
+  lowStockAlerts: 'lowStockAlerts',
   cashRegisters: 'cashRegisters',
   cashSessions: 'cashSessions',
   dailySummaries: 'dailySummaries',

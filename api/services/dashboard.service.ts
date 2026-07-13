@@ -6,8 +6,10 @@
 import { PrismaClient } from '@prisma/client'
 import { startOfDay, endOfDay } from 'date-fns'
 import { TenantContext } from '@/api/middleware/tenant'
+import { BillingService } from '@/services/BillingService'
 
 const prisma = new PrismaClient()
+const billingService = new BillingService()
 
 export interface DashboardSummary {
   todayRevenue: number
@@ -59,44 +61,23 @@ export const getDashboardSummary = async (
 
   try {
     // ─── Today's Revenue ───────────────────────────────────
-    const todayRevenue = await prisma.payment.aggregate({
-      where: {
-        organizationId: tenantContext.organizationId,
-        bill: {
-          branchId: branchId,
-        },
-        createdAt: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        paymentStatus: 'completed',
-        deletedAt: null,
-      },
-      _sum: {
-        amount: true,
-      },
-    })
+    // Use BillingService to get revenue for today
+    const todayRevenueData = await billingService.getRevenue(
+      todayStart,
+      todayEnd,
+      branchId,
+      tenantContext.organizationId
+    )
+    const todayRevenueAmount = todayRevenueData
 
-    const yesterdayRevenue = await prisma.payment.aggregate({
-      where: {
-        organizationId: tenantContext.organizationId,
-        bill: {
-          branchId: branchId,
-        },
-        createdAt: {
-          gte: yesterdayStart,
-          lte: yesterdayEnd,
-        },
-        paymentStatus: 'completed',
-        deletedAt: null,
-      },
-      _sum: {
-        amount: true,
-      },
-    })
-
-    const todayRevenueAmount = Number(todayRevenue._sum.amount ?? 0)
-    const yesterdayRevenueAmount = Number(yesterdayRevenue._sum.amount ?? 0)
+    // Use BillingService to get revenue for yesterday
+    const yesterdayRevenueData = await billingService.getRevenue(
+      yesterdayStart,
+      yesterdayEnd,
+      branchId,
+      tenantContext.organizationId
+    )
+    const yesterdayRevenueAmount = yesterdayRevenueData
     const todayRevenueChangePercent =
       yesterdayRevenueAmount > 0
         ? ((todayRevenueAmount - yesterdayRevenueAmount) /

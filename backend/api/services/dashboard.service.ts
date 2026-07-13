@@ -1,9 +1,13 @@
 /**
  * Dashboard Service
  * Calculates dashboard metrics from database
+ * 
+ * PARTIALLY MIGRATED TO FIRESTORE (Phase 6.2.8)
+ * Customer operations now use Firestore repositories
  */
 
 import { PrismaClient } from '@prisma/client'
+import { CustomerRepository } from '@/repositories'
 import { startOfDay, endOfDay } from 'date-fns'
 import { TenantContext } from '@/api/middleware/tenant'
 
@@ -176,28 +180,20 @@ export const getDashboardSummary = async (
     // TODO: Calculate table occupancy change from yesterday
     const tableOccupancyChangePercent = 0
 
-    // ─── New Guests ────────────────────────────────────────
-    const newGuestsCount = await prisma.customer.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        createdAt: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        deletedAt: null,
-      },
-    })
+    // ─── New Guests (MIGRATED TO FIRESTORE) ────────────────
+    const customerRepo = new CustomerRepository()
 
-    const yesterdayNewGuests = await prisma.customer.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        createdAt: {
-          gte: yesterdayStart,
-          lte: yesterdayEnd,
-        },
-        deletedAt: null,
-      },
-    })
+    const newGuestsCount = await customerRepo.countByDateRange(
+      tenantContext.organizationId,
+      todayStart,
+      todayEnd
+    )
+
+    const yesterdayNewGuests = await customerRepo.countByDateRange(
+      tenantContext.organizationId,
+      yesterdayStart,
+      yesterdayEnd
+    )
 
     const newGuestsChange = newGuestsCount - yesterdayNewGuests
 

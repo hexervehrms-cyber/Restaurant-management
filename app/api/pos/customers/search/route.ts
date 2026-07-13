@@ -5,13 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { CustomerRepository } from '@/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
 
-const prisma = new PrismaClient()
+const customerRepo = new CustomerRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,31 +27,21 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Search customers by phone or name
-    const customers = await prisma.customer.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        deletedAt: null,
-        OR: [
-          { phone: { contains: query, mode: 'insensitive' } },
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-        ],
-      },
-      select: {
-        id: true,
-        phone: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-      },
-      take: 10,
-    })
+    // Search customers by query using repository
+    const customers = await customerRepo.search(tenantContext.organizationId, query)
+
+    // Limit to 10 results and format response
+    const results = customers.slice(0, 10).map((customer) => ({
+      id: customer.id,
+      phone: customer.phone,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+    }))
 
     return NextResponse.json(successResponse({
-      data: customers,
-      meta: { total: customers.length },
+      data: results,
+      meta: { total: results.length },
     }))
   } catch (error: any) {
     console.error('Error searching customers:', error)
