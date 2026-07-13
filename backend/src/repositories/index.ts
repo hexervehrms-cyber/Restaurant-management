@@ -68,6 +68,35 @@ export {
 } from './BranchRepository'
 
 /**
+ * Menu Module Repositories
+ * Handle menu categories, items, variants, modifiers, and modifier groups
+ */
+export {
+  MenuCategoryRepository,
+  type MenuCategoryDocument,
+} from './MenuCategoryRepository'
+export {
+  MenuItemRepository,
+  type MenuItemDocument,
+} from './MenuItemRepository'
+export {
+  MenuVariantRepository,
+  type MenuVariantDocument,
+} from './MenuVariantRepository'
+export {
+  MenuItemModifierGroupRepository,
+  type MenuItemModifierGroupDocument,
+} from './MenuItemModifierGroupRepository'
+export {
+  ModifierGroupRepository,
+  type ModifierGroupDocument,
+} from './ModifierGroupRepository'
+export {
+  ModifierRepository,
+  type ModifierDocument,
+} from './ModifierRepository'
+
+/**
  * Re-export commonly used types
  */
 export type {
@@ -83,7 +112,6 @@ export type {
   PaginationResult,
   PaginationOptions,
   CursorPaginationResult,
-  FirestoreError,
   FirestoreTimestamp,
 } from '../types/firestore'
 

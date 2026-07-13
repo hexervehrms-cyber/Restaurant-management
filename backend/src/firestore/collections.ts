@@ -24,6 +24,7 @@ export const COLLECTIONS = {
   menuCategories: 'menuCategories',
   menuItems: 'menuItems',
   menuVariants: 'menuVariants',
+  menuItemModifierGroups: 'menuItemModifierGroups',
   modifierGroups: 'modifierGroups',
   modifiers: 'modifiers',
   suppliers: 'suppliers',

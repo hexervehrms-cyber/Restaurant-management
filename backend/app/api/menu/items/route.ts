@@ -5,12 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import {
+  MenuCategoryRepository,
+  MenuItemRepository,
+  MenuVariantRepository,
+} from '@/src/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
 
 const prisma = new PrismaClient()
+const categoryRepo = new MenuCategoryRepository()
+const itemRepo = new MenuItemRepository()
+const variantRepo = new MenuVariantRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,42 +43,60 @@ export async function GET(request: NextRequest) {
       throw new ValidationError('Branch not found')
     }
 
-    // Query menu items by restaurantId (not branchId)
-    const where: any = {
-      restaurantId: branch.restaurantId,
-      organizationId: tenantContext.organizationId,
-      isAvailable: true,
-      deletedAt: null,
-    }
+    // Query menu items by restaurantId using repository
+    let items = await itemRepo.findAvailableByRestaurant(
+      branch.restaurantId,
+      tenantContext.organizationId
+    )
 
+    // Filter by category if specified
     if (category !== 'all') {
-      where.categoryId = category
+      items = items.filter((item) => item.categoryId === category)
     }
 
+    // Filter by search term if specified
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ]
+      const searchLower = search.toLowerCase()
+      items = items.filter(
+        (item) =>
+          item.name.toLowerCase().includes(searchLower) ||
+          item.description?.toLowerCase().includes(searchLower)
+      )
     }
 
-    const items = await prisma.menuItem.findMany({
-      where,
-      include: {
-        category: true,
-        variants: true,
-        modifierGroups: true,
-      },
-      orderBy: { displayOrder: 'asc' },
-      take: 100,
+    // Limit to 100 items
+    items = items.slice(0, 100)
+
+    // Fetch category names and variants for formatted response
+    const allCategories = await categoryRepo.findByRestaurant(
+      branch.restaurantId,
+      tenantContext.organizationId
+    )
+    const categoryMap = new Map(allCategories.map((c) => [c.id, c.name]))
+
+    // Batch fetch all variants for these items
+    const itemIds = items.map((item) => item.id)
+    const allVariants = await variantRepo.findMany({
+      filters: [
+        { field: 'menuItemId', operator: 'in', value: itemIds },
+        { field: 'organizationId', operator: '==', value: tenantContext.organizationId },
+        { field: 'isDeleted', operator: '==', value: false },
+      ],
     })
+    const itemVariantsMap = new Map<string, any[]>()
+    for (const variant of allVariants) {
+      if (!itemVariantsMap.has(variant.menuItemId)) {
+        itemVariantsMap.set(variant.menuItemId, [])
+      }
+      itemVariantsMap.get(variant.menuItemId)!.push(variant)
+    }
 
     const formatted = items.map((item) => ({
       id: item.id,
       name: item.name,
       description: item.description || '',
-      category: item.category?.name || 'Uncategorized',
-      price: Number(item.basePrice),
+      category: categoryMap.get(item.categoryId) || 'Uncategorized',
+      price: item.basePrice,
       image: item.imageUrl || '',
       isVeg: item.isVegetarian,
       isAvailable: item.isAvailable,
@@ -78,16 +104,12 @@ export async function GET(request: NextRequest) {
       gst: 5,
       rating: 4.5,
       tags: item.isSpicy ? ['spicy'] : [],
-      variants: item.variants?.map((v) => ({
+      variants: (itemVariantsMap.get(item.id) || []).map((v) => ({
         id: v.id,
         name: v.name,
-        price: Number(v.priceModifier || 0),
-      })) || [],
-      addons: item.modifierGroups?.map((m) => ({
-        id: m.id,
-        name: m.name,
-        price: 0,
-      })) || [],
+        price: v.priceModifier || 0,
+      })),
+      addons: [],
     }))
 
     return NextResponse.json(successResponse({
