@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Prevent MD and TXT File Creation",
+  "description": "Prevents creation of markdown (.md) and text (.txt) files unless explicitly requested by the user",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "*.md",
+      "*.txt"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A .md or .txt file was just created. Did you explicitly ask for this file to be created? If not, please delete it and let me know. If you did ask for it, that's fine - proceed as normal."
+  }
+}
