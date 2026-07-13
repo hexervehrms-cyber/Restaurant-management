@@ -29,54 +29,27 @@ export const getTablesByBranch = async (
   tenantContext: TenantContext
 ): Promise<TableInfo[]> => {
   try {
-    const tables = await prisma.restaurantTable.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        deletedAt: null,
-      },
-      include: {
-        reservations: {
-          where: {
-            status: {
-              in: ['confirmed', 'checked_in'],
-            },
-            deletedAt: null,
-          },
-        },
-        orders: {
-          where: {
-            status: {
-              in: ['pending', 'confirmed', 'preparing', 'ready'],
-            },
-            deletedAt: null,
-          },
-          include: {
-            createdBy: true,
-          },
-        },
-      },
-      orderBy: {
-        tableNumber: 'asc',
-      },
+    const tables = await tableRepo.findMany({
+      filters: [
+        { field: 'organizationId', operator: '==', value: tenantContext.organizationId },
+        { field: 'branchId', operator: '==', value: branchId },
+        { field: 'isDeleted', operator: '==', value: false },
+      ],
+      orderBy: [{ field: 'tableNumber', direction: 'asc' }],
     })
 
-    return tables.map((table) => {
-      const activeOrder = table.orders[0]
-
-      return {
-        id: table.id,
-        tableNumber: table.tableNumber,
-        capacity: table.capacity,
-        section: table.section,
-        status: table.status,
-        occupiedSince: activeOrder?.createdAt ?? null,
-        guestCount: activeOrder ? undefined : null, // TODO: Get from reservation or order
-        waiterName: activeOrder?.createdBy?.firstName ?? null,
-        x: table.xPosition ? Number(table.xPosition) : null,
-        y: table.yPosition ? Number(table.yPosition) : null,
-      }
-    })
+    return tables.map((table) => ({
+      id: table.id,
+      tableNumber: table.tableNumber,
+      capacity: table.capacity,
+      section: table.section || null,
+      status: table.status,
+      occupiedSince: table.occupiedSince || null,
+      guestCount: table.guestCount || null,
+      waiterName: table.waiterName || null,
+      x: table.xPosition ? Number(table.xPosition) : null,
+      y: table.yPosition ? Number(table.yPosition) : null,
+    }))
   } catch (error) {
     console.error('Error fetching tables:', error)
     throw error

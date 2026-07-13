@@ -6,33 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { KitchenService } from '@/backend/src/services/KitchenService'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
 
 const prisma = new PrismaClient()
-
-async function generateKitchenTicketNumber(
-  branchId: string,
-  organizationId: string
-): Promise<string> {
-  const today = new Date()
-  const date = today.toISOString().split('T')[0].replace(/-/g, '')
-
-  const count = await prisma.kitchenTicket.count({
-    where: {
-      branchId,
-      organizationId,
-      createdAt: {
-        gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-        lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-      },
-    },
-  })
-
-  return `KT-${date}-${String(count + 1).padStart(4, '0')}`
-}
+const kitchenService = new KitchenService()
 
 export async function POST(
   request: NextRequest,
@@ -72,54 +53,23 @@ export async function POST(
       )
     }
 
-    // Get default kitchen section (or first available)
-    const kitchenSection = await prisma.kitchenSection.findFirst({
-      where: {
-        branchId: order.branchId,
-        organizationId: tenantContext.organizationId,
-        deletedAt: null,
-      },
-    })
-
-    if (!kitchenSection) {
-      throw new ValidationError('No kitchen section found for this branch')
-    }
-
-    // Generate kitchen ticket number
-    const ticketNumber = await generateKitchenTicketNumber(
+    // Create kitchen ticket using KitchenService
+    const kitchenTicketResult = await kitchenService.createKitchenTicket(
+      order.id,
+      order.items.map((item) => ({
+        id: item.id,
+        itemName: item.itemName,
+        quantity: item.quantity,
+        specialInstructions: item.specialInstructions,
+      })),
       order.branchId,
-      tenantContext.organizationId
+      order.restaurantId,
+      tenantContext.organizationId,
+      order.table ? order.table.tableNumber : 'Takeaway',
+      'POS Order',
+      order.notes || null,
+      authContext.userId
     )
-
-    // Create kitchen ticket with items
-    const kitchenTicket = await prisma.kitchenTicket.create({
-      data: {
-        organizationId: tenantContext.organizationId,
-        branchId: order.branchId,
-        restaurantId: order.restaurantId,
-        orderId: order.id,
-        kitchenSectionId: kitchenSection.id,
-        ticketNumber,
-        status: 'pending',
-        tableNumber: order.table ? order.table.tableNumber : 'Takeaway',
-        customerName: 'POS Order',
-        specialInstructions: order.notes || null,
-        priority: 0,
-        // Create ticket items
-        items: {
-          create: order.items.map((item) => ({
-            orderItemId: item.id,
-            organizationId: tenantContext.organizationId,
-            itemName: item.itemName,
-            quantity: item.quantity,
-            specialInstructions: item.specialInstructions || null,
-          })),
-        },
-      },
-      include: {
-        items: true,
-      },
-    })
 
     // Update order status
     await prisma.order.update({
@@ -131,9 +81,9 @@ export async function POST(
 
     return NextResponse.json(
       successResponse({
-        ticketId: kitchenTicket.id,
-        ticketNumber: kitchenTicket.ticketNumber,
-        itemCount: kitchenTicket.items.length,
+        ticketId: kitchenTicketResult.ticket.id,
+        ticketNumber: kitchenTicketResult.ticket.ticketNumber,
+        itemCount: kitchenTicketResult.items.length,
         status: 'sent_to_kitchen',
       }),
       { status: 201 }

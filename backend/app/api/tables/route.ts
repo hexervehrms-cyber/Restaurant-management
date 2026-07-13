@@ -1,16 +1,17 @@
 /**
  * GET /api/tables?branchId=<id>
  * Get all tables for a branch
+ * MIGRATED TO FIRESTORE: Uses RestaurantTableRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
+import { RestaurantTableRepository } from '@/repositories'
 
-const prisma = new PrismaClient()
+const tableRepository = new RestaurantTableRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,33 +23,24 @@ export async function GET(request: NextRequest) {
       throw new ValidationError('branchId is required')
     }
 
-    // TODO: Extract real auth context from JWT token
     const authContext = getMockAuthContext()
-
-    // Extract tenant context
     const tenantContext = extractTenantContext(authContext)
 
     // Fetch all tables for the branch
-    const tables = await prisma.restaurantTable.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        tableNumber: true,
-        capacity: true,
-        section: true,
-        status: true,
-      },
-      orderBy: [
-        { section: 'asc' },
-        { tableNumber: 'asc' },
-      ],
-    })
+    const tables = await tableRepository.findByBranch(branchId)
 
-    return NextResponse.json(successResponse(tables))
+    // Filter for organization (soft delete check)
+    const filtered = tables.filter(t => !t.isDeleted && t.organizationId === tenantContext.organizationId)
+
+    const response = filtered.map(table => ({
+      id: table.id,
+      tableNumber: table.tableNumber,
+      capacity: table.capacity,
+      section: table.section,
+      status: table.status,
+    }))
+
+    return NextResponse.json(successResponse(response))
   } catch (error: any) {
     console.error('Error fetching tables:', error)
 

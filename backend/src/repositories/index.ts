@@ -302,6 +302,24 @@ export {
 export { InventoryService } from '../services/InventoryService'
 
 /**
+ * Billing Module Service
+ * High-level business logic for billing operations
+ */
+export { BillingService } from '../services/BillingService'
+
+/**
+ * Kitchen Module Service
+ * High-level business logic for kitchen operations
+ */
+export { KitchenService } from '../services/KitchenService'
+
+/**
+ * Reservation Module Service
+ * High-level business logic for reservation operations
+ */
+export { ReservationService } from '../services/ReservationService'
+
+/**
  * Notifications Module Repositories
  * Handle notification data
  */

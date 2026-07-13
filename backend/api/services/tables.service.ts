@@ -4,7 +4,7 @@
  */
 
 import { TenantContext } from '@/api/middleware/tenant'
-import { RestaurantTableRepository } from '@/repositories'
+import { RestaurantTableRepository } from '@/src/repositories'
 
 const tableRepo = new RestaurantTableRepository()
 

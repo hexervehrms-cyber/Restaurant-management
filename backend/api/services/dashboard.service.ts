@@ -12,15 +12,15 @@
  * Pattern: DashboardService → Repositories → BaseRepository → Firestore
  */
 
-import { CustomerRepository, BillingService, OrderRepository, RestaurantTableRepository } from '@/repositories'
 import { startOfDay, endOfDay } from 'date-fns'
 import { TenantContext } from '@/api/middleware/tenant'
+import { BillingService } from '@/src/services/BillingService'
+import { CustomerRepository, OrderRepository, RestaurantTableRepository } from '@/src/repositories'
 
 const billingService = new BillingService()
 const customerRepo = new CustomerRepository()
 const orderRepo = new OrderRepository()
 const tableRepo = new RestaurantTableRepository()
-const customerRepo = new CustomerRepository()
 
 export interface DashboardSummary {
   todayRevenue: number

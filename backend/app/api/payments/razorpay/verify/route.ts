@@ -12,7 +12,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient, Prisma } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
@@ -22,8 +21,10 @@ import {
   fetchRazorpayPayment,
   paiseToRupees,
 } from '@/lib/razorpay'
+import { BillRepository, PaymentRepository } from '@/src/repositories'
 
-const prisma = new PrismaClient()
+const billRepo = new BillRepository()
+const paymentRepo = new PaymentRepository()
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,11 +66,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the bill
-    const bill = await prisma.bill.findUnique({
-      where: { id: billId },
-    })
+    const bill = await billRepo.findById(billId)
 
-    if (!bill) {
+    if (!bill || bill.organizationId !== tenantContext.organizationId) {
       throw new ValidationError('Bill not found')
     }
 
@@ -77,82 +76,74 @@ export async function POST(request: NextRequest) {
     const paymentAmount = paiseToRupees(razorpayPayment.amount)
 
     // Validate amount matches
-    if (paymentAmount > Number(bill.balanceDue)) {
+    const balanceDue = parseFloat(bill.balanceDue as any)
+    if (paymentAmount > balanceDue) {
       throw new ValidationError(
         'Payment amount exceeds balance due'
       )
     }
 
     // Update or create payment record
-    const existingPayment = await prisma.payment.findFirst({
-      where: {
-        referenceNumber: razorpay_order_id,
-        billId: billId,
-      },
+    const existingPayment = await paymentRepo.findMany({
+      filters: [
+        { field: 'referenceNumber', operator: '==', value: razorpay_order_id },
+        { field: 'billId', operator: '==', value: billId },
+      ],
     })
 
-    let payment
-    if (existingPayment) {
-      payment = await prisma.payment.update({
-        where: { id: existingPayment.id },
-        data: {
-          amount: new Prisma.Decimal(paymentAmount),
+    let paymentId: string
+    if (existingPayment.length > 0) {
+      const updated = await paymentRepo.update(
+        existingPayment[0].id,
+        {
+          amount: paymentAmount.toFixed(2),
           transactionId: razorpay_payment_id,
           paymentStatus: 'completed',
         },
-      })
+        authContext.userId
+      )
+      paymentId = updated.data?.id || existingPayment[0].id
     } else {
-      payment = await prisma.payment.create({
-        data: {
-          organizationId: tenantContext.organizationId,
+      const created = await paymentRepo.create(
+        {
           billId: bill.id,
-          orderId: bill.orderId || null,
-          customerId: bill.customerId || null,
-          amount: new Prisma.Decimal(paymentAmount),
+          orderId: bill.orderId,
+          customerId: bill.customerId,
+          amount: paymentAmount.toFixed(2),
           paymentMethod: 'online_payment',
           paymentStatus: 'completed',
           referenceNumber: razorpay_order_id,
           transactionId: razorpay_payment_id,
           receivedById: authContext.userId,
         },
-      })
+        authContext.userId,
+        tenantContext.organizationId
+      )
+      paymentId = created.data?.id || ''
     }
 
     // Update bill with payment
-    const newAmountPaid = bill.amountPaid.plus(new Prisma.Decimal(paymentAmount))
-    const newBalanceDue = bill.balanceDue.minus(new Prisma.Decimal(paymentAmount))
-    const isFullyPaid = newBalanceDue.lte(new Prisma.Decimal(0))
+    const amountPaid = parseFloat(bill.amountPaid as any)
+    const newAmountPaid = amountPaid + paymentAmount
+    const newBalanceDue = balanceDue - paymentAmount
+    const isFullyPaid = newBalanceDue <= 0
 
-    const updatedBill = await prisma.bill.update({
-      where: { id: billId },
-      data: {
-        amountPaid: newAmountPaid,
-        balanceDue: isFullyPaid ? new Prisma.Decimal(0) : newBalanceDue,
-        paymentStatus: isFullyPaid ? 'completed' : 'pending',
-        billStatus: isFullyPaid ? 'paid' : 'open',
-        settledAt: isFullyPaid ? new Date() : null,
-        settledById: isFullyPaid ? authContext.userId : null,
-      },
-    })
-
-    // Update order payment status if bill is fully paid
-    if (isFullyPaid && bill.orderId) {
-      await prisma.order.update({
-        where: { id: bill.orderId },
-        data: {
-          paymentStatus: 'completed',
-        },
-      })
-    }
+    const billUpdateResult = await billRepo.updatePaymentStatus(
+      billId,
+      isFullyPaid ? 'completed' : 'pending',
+      newAmountPaid.toFixed(2),
+      Math.max(0, newBalanceDue).toFixed(2),
+      authContext.userId
+    )
 
     return NextResponse.json(
       successResponse({
-        paymentId: payment.id,
-        amount: Number(payment.amount),
+        paymentId,
+        amount: paymentAmount,
         transactionId: razorpay_payment_id,
-        billStatus: updatedBill.billStatus,
-        amountPaid: Number(updatedBill.amountPaid),
-        balanceDue: Number(updatedBill.balanceDue),
+        billStatus: isFullyPaid ? 'paid' : 'open',
+        amountPaid: newAmountPaid,
+        balanceDue: Math.max(0, newBalanceDue),
         isFullyPaid,
       }),
       { status: 200 }

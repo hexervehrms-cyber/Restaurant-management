@@ -381,3 +381,46 @@ export type {
   PaymentStatus,
   PaymentMethod,
 } from './reservations'
+
+// ============= KITCHEN MODULE TYPES =============
+
+/**
+ * Re-export Kitchen module document types
+ */
+export type {
+  KitchenSectionDocument,
+  CreateKitchenSectionPayload,
+  UpdateKitchenSectionPayload,
+  KitchenTicketDocument,
+  CreateKitchenTicketPayload,
+  UpdateKitchenTicketPayload,
+  KitchenTicketItemDocument,
+  CreateKitchenTicketItemPayload,
+  UpdateKitchenTicketItemPayload,
+  KitchenStatusLogDocument,
+  CreateKitchenStatusLogPayload,
+  UpdateKitchenStatusLogPayload,
+  KitchenTicketWithDetails,
+  KitchenTicketSearchResult,
+  KitchenDashboardItem,
+  KitchenLiveStatus,
+  KitchenTicketStatus,
+  KitchenSectionType,
+} from './kitchen'
+
+// ============= NOTIFICATIONS MODULE TYPES =============
+
+/**
+ * Re-export Notifications module document types
+ */
+export type {
+  NotificationDocument,
+  CreateNotificationPayload,
+  UpdateNotificationPayload,
+  NotificationWithFormatting,
+  NotificationListItem,
+  NotificationCounts,
+  NotificationType,
+  NotificationStatus,
+  NotificationChannel,
+} from './notifications'

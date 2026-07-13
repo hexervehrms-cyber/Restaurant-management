@@ -8,20 +8,19 @@
  * - Reservations: ReservationService (Firestore)
  * - Kitchen: KitchenService (Firestore)
  * - Live orders: OrderRepository (Firestore)
- * - POS: Prisma (not yet in migration scope)
+ * - POS: TODO - not yet in migration scope
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-import { InventoryService, OrderRepository } from '@/repositories'
-import { ReservationService } from '../../../src/services/ReservationService'
-import { KitchenService } from '@/services/KitchenService'
+import { InventoryService } from '@/src/services/InventoryService'
+import { ReservationService } from '@/src/services/ReservationService'
+import { KitchenService } from '@/src/services/KitchenService'
+import { OrderRepository } from '@/src/repositories'
 
-const prisma = new PrismaClient()
 const inventoryService = new InventoryService()
 const reservationService = new ReservationService()
 const kitchenService = new KitchenService()
@@ -71,16 +70,8 @@ export async function GET(request: NextRequest) {
       tenantContext.organizationId
     )
 
-    // Check if POS is live (using Prisma - not in Inventory scope)
-    const posSession = await prisma.cashRegisterSession.findFirst({
-      where: {
-        organizationId: tenantContext.organizationId,
-        cashRegister: {
-          branchId: branchId,
-        },
-        status: 'open',
-      },
-    })
+    // Check if POS is live - TODO: Implement with POS Service or CashRegister Repository
+    const posSession = false // Placeholder for now
 
     // Check if kitchen is live (using KitchenService + Firestore)
     const kitchenStatus = await kitchenService.getKitchenLiveStatus(
@@ -93,7 +84,7 @@ export async function GET(request: NextRequest) {
         reservations: reservationsCount,
         liveOrders: liveOrdersCount,
         inventoryAlerts: inventoryAlertsCount,
-        posLive: !!posSession,
+        posLive: posSession,
         kitchenLive: kitchenStatus.isLive,
       })
     )

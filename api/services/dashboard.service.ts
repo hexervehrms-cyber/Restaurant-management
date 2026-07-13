@@ -14,7 +14,7 @@
 
 import { startOfDay, endOfDay } from 'date-fns'
 import { TenantContext } from '@/api/middleware/tenant'
-import { BillingService } from '@/services/BillingService'
+import { BillingService } from '@/repositories'
 import { CustomerRepository, OrderRepository, RestaurantTableRepository } from '@/repositories'
 
 const billingService = new BillingService()

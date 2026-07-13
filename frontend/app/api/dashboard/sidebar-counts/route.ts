@@ -2,7 +2,7 @@
  * GET /api/dashboard/sidebar-counts?branchId=<id>
  * Get sidebar badge counts
  * 
- * Migrated to use Firestore repositories for inventory alerts and reservations
+ * Migrated to use Firestore repositories for inventory alerts, reservations, and kitchen tickets
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -13,10 +13,12 @@ import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
 import { InventoryService } from '@/repositories'
 import { ReservationService } from '@/backend/src/services/ReservationService'
+import { KitchenService } from '@/backend/src/services/KitchenService'
 
 const prisma = new PrismaClient()
 const inventoryService = new InventoryService()
 const reservationService = new ReservationService()
+const kitchenService = new KitchenService()
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,17 +86,11 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Check if kitchen is live (using Prisma - not in Inventory scope)
-    const kitchenTickets = await prisma.kitchenTicket.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        status: {
-          in: ['pending', 'preparing'],
-        },
-        deletedAt: null,
-      },
-    })
+    // Check if kitchen is live (using Firestore)
+    const kitchenLiveStatus = await kitchenService.getKitchenLiveStatus(
+      branchId,
+      tenantContext.organizationId
+    )
 
     return NextResponse.json(
       successResponse({
@@ -102,7 +98,7 @@ export async function GET(request: NextRequest) {
         liveOrders: liveOrdersCount,
         inventoryAlerts: inventoryAlertsCount,
         posLive: !!posSession,
-        kitchenLive: kitchenTickets > 0,
+        kitchenLive: kitchenLiveStatus.isLive,
       })
     )
   } catch (error: any) {

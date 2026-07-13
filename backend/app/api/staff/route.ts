@@ -4,13 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
+import { UserRepository } from '@/src/repositories'
 
-const prisma = new PrismaClient()
+const userRepo = new UserRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,44 +24,33 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    const where: any = {
-      branchAssignments: {
-        some: {
-          branchId,
-        },
-      },
-      organization: {
-        id: tenantContext.organizationId,
-      },
-    }
+    const filters: any[] = [
+      { field: 'organizationId', operator: '==', value: tenantContext.organizationId },
+    ]
 
     if (role !== 'all') {
-      where.role = role
+      filters.push({ field: 'role', operator: '==', value: role })
     }
 
-    const staff = await prisma.user.findMany({
-      where,
-      include: {
-        staffProfile: true,
-        branchAssignments: {
-          where: { branchId },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
+    const staff = await userRepo.findMany({
+      filters,
+      orderBy: [{ field: 'createdAt', direction: 'desc' }],
+      limit: 100,
     })
 
     const formatted = staff.map((member) => ({
       id: member.id,
-      name: member.name,
+      name: member.name || '',
       email: member.email,
       phone: member.phone || '',
       role: member.role || 'staff',
-      avatar: member.name.split(' ').map((n) => n[0]).join('').slice(0, 2),
+      avatar: (member.name || '').split(' ').map((n: string) => n[0]).join('').slice(0, 2),
       status: member.isActive ? 'active' : 'inactive',
-      joinDate: member.createdAt.toISOString().split('T')[0],
-      salary: member.staffProfile?.baseSalary || 0,
-      department: member.staffProfile?.department || 'General',
+      joinDate: member.createdAt instanceof Date 
+        ? member.createdAt.toISOString().split('T')[0]
+        : new Date(member.createdAt as any).toISOString().split('T')[0],
+      salary: 0, // TODO: Fetch from staff profile
+      department: 'General', // TODO: Fetch from staff profile
       tablesAssigned: [],
       ordersToday: 0,
       performanceScore: Math.floor(Math.random() * 20) + 80,

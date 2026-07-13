@@ -4,18 +4,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import {
   MenuCategoryRepository,
   MenuItemRepository,
   MenuVariantRepository,
+  BranchRepository,
 } from '@/src/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
 
-const prisma = new PrismaClient()
+const branchRepo = new BranchRepository()
 const categoryRepo = new MenuCategoryRepository()
 const itemRepo = new MenuItemRepository()
 const variantRepo = new MenuVariantRepository()
@@ -34,10 +34,7 @@ export async function GET(request: NextRequest) {
     const tenantContext = extractTenantContext(authContext)
 
     // Get the branch to resolve restaurantId
-    const branch = await prisma.branch.findUnique({
-      where: { id: branchId },
-      select: { restaurantId: true },
-    })
+    const branch = await branchRepo.findById(branchId)
 
     if (!branch) {
       throw new ValidationError('Branch not found')
@@ -96,7 +93,7 @@ export async function GET(request: NextRequest) {
       name: item.name,
       description: item.description || '',
       category: categoryMap.get(item.categoryId) || 'Uncategorized',
-      price: item.basePrice,
+      price: parseFloat(item.basePrice as any),
       image: item.imageUrl || '',
       isVeg: item.isVegetarian,
       isAvailable: item.isAvailable,
@@ -107,7 +104,7 @@ export async function GET(request: NextRequest) {
       variants: (itemVariantsMap.get(item.id) || []).map((v) => ({
         id: v.id,
         name: v.name,
-        price: v.priceModifier || 0,
+        price: parseFloat(v.priceModifier as any) || 0,
       })),
       addons: [],
     }))
