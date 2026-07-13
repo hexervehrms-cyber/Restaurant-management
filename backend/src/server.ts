@@ -1,5 +1,6 @@
 import { createApp } from './app'
-import dotenv from 'dotenv'
+import { initializeFirebase } from './config/firebase'
+import * as dotenv from 'dotenv'
 
 /**
  * Load environment variables
@@ -9,7 +10,7 @@ dotenv.config()
 /**
  * Get port from environment or use default
  */
-const PORT = process.env.PORT || 5000
+const PORT = parseInt(process.env.PORT || '5000', 10)
 const HOST = process.env.HOST || 'localhost'
 
 /**
@@ -17,11 +18,14 @@ const HOST = process.env.HOST || 'localhost'
  */
 async function startServer() {
   try {
+    // Initialize Firebase Admin SDK
+    await initializeFirebase()
+
     // Create Express application
     const app = createApp()
 
     // Start listening
-    app.listen(PORT, HOST as string, () => {
+    app.listen(PORT, HOST, () => {
       console.log(`✓ Server running on http://${HOST}:${PORT}`)
       console.log(`✓ Health check: http://${HOST}:${PORT}/health`)
       console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`)

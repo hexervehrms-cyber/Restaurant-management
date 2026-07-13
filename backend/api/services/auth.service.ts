@@ -1,12 +1,11 @@
 /**
  * Authentication Service
  * Handles user authentication and context retrieval
+ * Uses Firestore repositories (UserRepository, RoleRepository, OrganizationRepository)
  */
 
-import { PrismaClient } from '@prisma/client'
-import { NotFoundError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
+import { UserRepository, OrganizationRepository } from '@/repositories'
+import { AuthenticationError } from '@/api/utils/errors'
 
 export interface UserContext {
   id: string
@@ -21,42 +20,41 @@ export interface UserContext {
 
 /**
  * Get current user context (me endpoint)
- * TODO: Replace userId with actual JWT extraction
+ * Uses Firestore via UserRepository and OrganizationRepository
  */
 export const getCurrentUserContext = async (
   userId: string
 ): Promise<UserContext> => {
-  // TODO: Extract from JWT token in real implementation
-  // For now, fetch user and related data
+  const userRepo = new UserRepository()
+  const orgRepo = new OrganizationRepository()
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      staffProfile: true,
-    },
-  })
-
+  // Fetch user from Firestore
+  const user = await userRepo.findById(userId)
   if (!user) {
-    throw new NotFoundError('User not found')
+    throw new AuthenticationError('User not found')
   }
 
-  // TODO: Get user's assigned branches and return first one
-  // For now, return hardcoded values (TEMPORARY FOR DEVELOPMENT)
+  // Fetch organization from Firestore
+  const org = await orgRepo.findById(user.organizationId)
+  if (!org) {
+    throw new AuthenticationError('Organization not found')
+  }
 
   return {
     id: user.id,
     name: `${user.firstName || 'User'} ${user.lastName || ''}`.trim(),
     role: user.role,
-    organizationId: user.organizationId || 'demo-org',
-    restaurantId: user.staffProfile?.restaurantId || 'demo-restaurant',
-    branchId: 'demo-branch',
-    restaurantName: 'Spice Garden', // TODO: Fetch from restaurant table
-    branchName: 'Mumbai Central', // TODO: Fetch from branch table
+    organizationId: user.organizationId,
+    restaurantId: user.restaurantId || 'demo-restaurant',
+    branchId: user.branchId || 'demo-branch',
+    restaurantName: org.displayName,
+    branchName: org.name, // TODO: Fetch from branches collection if needed
   }
 }
 
 /**
- * TODO: Implement JWT token validation
+ * Validate JWT token and return user ID
+ * TODO: Implement actual JWT verification
  */
 export const validateToken = async (token: string): Promise<string> => {
   // TODO: Verify JWT token and return userId
@@ -64,7 +62,8 @@ export const validateToken = async (token: string): Promise<string> => {
 }
 
 /**
- * TODO: Implement user registration
+ * Register new user
+ * TODO: Implement with password hashing
  */
 export const registerUser = async (data: {
   email: string
@@ -72,12 +71,39 @@ export const registerUser = async (data: {
   firstName: string
   lastName: string
 }) => {
-  // TODO: Implement user registration with password hashing
+  const userRepo = new UserRepository()
+
+  // Check if email already exists
+  const existing = await userRepo.findByEmail(data.email)
+  if (existing) {
+    throw new AuthenticationError('Email already registered')
+  }
+
+  // TODO: Hash password and create user
+  // For now, return placeholder
+  return { success: true, message: 'Registration not yet implemented' }
 }
 
 /**
- * TODO: Implement user login
+ * Authenticate user login
+ * TODO: Implement with password verification
  */
 export const loginUser = async (email: string, password: string) => {
-  // TODO: Validate credentials and return JWT token
+  const userRepo = new UserRepository()
+
+  // Find user by email from Firestore
+  const user = await userRepo.findByEmail(email)
+  if (!user) {
+    throw new AuthenticationError('Invalid credentials')
+  }
+
+  // Check if account is locked
+  const isLocked = await userRepo.isAccountLocked(user.id)
+  if (isLocked) {
+    throw new AuthenticationError('Account temporarily locked')
+  }
+
+  // TODO: Verify password hash
+  // For now, return placeholder
+  return { success: true, message: 'Login not yet implemented' }
 }
