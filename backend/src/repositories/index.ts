@@ -46,6 +46,28 @@ export {
 } from './OrganizationRepository'
 
 /**
+ * Restaurant Module Repositories
+ * Handle restaurant configuration and settings
+ */
+export {
+  RestaurantRepository,
+  type RestaurantDocument,
+} from './RestaurantRepository'
+export {
+  RestaurantSettingsRepository,
+  type RestaurantSettingsDocument,
+} from './RestaurantSettingsRepository'
+
+/**
+ * Branch Module Repositories
+ * Handle branch data and configuration
+ */
+export {
+  BranchRepository,
+  type BranchDocument,
+} from './BranchRepository'
+
+/**
  * Re-export commonly used types
  */
 export type {
