@@ -1,12 +1,12 @@
 /**
  * Tables Service
- * Handles table-related queries
+ * Handles table-related queries - Firestore-backed
  */
 
-import { PrismaClient } from '@prisma/client'
 import { TenantContext } from '@/api/middleware/tenant'
+import { RestaurantTableRepository } from '@/repositories'
 
-const prisma = new PrismaClient()
+const tableRepo = new RestaurantTableRepository()
 
 export interface TableInfo {
   id: string
@@ -91,37 +91,17 @@ export const getTableCounts = async (
   tenantContext: TenantContext
 ) => {
   try {
-    const counts = await prisma.restaurantTable.groupBy({
-      by: ['status'],
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        deletedAt: null,
-      },
-      _count: {
-        id: true,
-      },
-    })
+    // Use RestaurantTableRepository (Firestore)
+    const occupied = await tableRepo.countOccupied(branchId, tenantContext.organizationId)
+    const available = await tableRepo.countAvailable(branchId, tenantContext.organizationId)
+    const maintenance = await tableRepo.countByStatus(branchId, tenantContext.organizationId, 'maintenance')
 
-    const result = {
-      available: 0,
-      occupied: 0,
-      reserved: 0,
-      cleaning: 0,
-      total: 0,
+    return {
+      occupied,
+      available,
+      maintenance,
+      total: occupied + available + maintenance,
     }
-
-    counts.forEach((count) => {
-      if (count.status === 'available') result.available = count._count.id
-      if (count.status === 'occupied') result.occupied = count._count.id
-      if (count.status === 'reserved') result.reserved = count._count.id
-      if (count.status === 'cleaning') result.cleaning = count._count.id
-    })
-
-    result.total =
-      result.available + result.occupied + result.reserved + result.cleaning
-
-    return result
   } catch (error) {
     console.error('Error fetching table counts:', error)
     throw error

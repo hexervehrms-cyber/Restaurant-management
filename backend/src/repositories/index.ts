@@ -221,6 +221,28 @@ export type {
 } from '../types/firestore'
 
 /**
+ * Orders Module Repositories
+ * Handle order data and analytics
+ */
+export {
+  OrderRepository,
+  type OrderDocument,
+  type CreateOrderPayload,
+  type UpdateOrderPayload,
+} from './OrderRepository'
+
+/**
+ * Restaurant Table Module Repositories
+ * Handle table data and occupancy tracking
+ */
+export {
+  RestaurantTableRepository,
+  type RestaurantTableDocument,
+  type CreateRestaurantTablePayload,
+  type UpdateRestaurantTablePayload,
+} from './RestaurantTableRepository'
+
+/**
  * Reservations Module Repositories
  * Handle reservation data, payments, and no-show logs
  */
@@ -244,10 +266,52 @@ export {
 } from './ReservationNoShowLogRepository'
 
 /**
+ * Kitchen Module Repositories
+ * Handle kitchen sections, tickets, items, and status logs
+ */
+export {
+  KitchenSectionRepository,
+  type KitchenSectionDocument,
+  type CreateKitchenSectionPayload,
+  type UpdateKitchenSectionPayload,
+} from './KitchenSectionRepository'
+export {
+  KitchenTicketRepository,
+  type KitchenTicketDocument,
+  type CreateKitchenTicketPayload,
+  type UpdateKitchenTicketPayload,
+  type KitchenTicketWithDetails,
+} from './KitchenTicketRepository'
+export {
+  KitchenTicketItemRepository,
+  type KitchenTicketItemDocument,
+  type CreateKitchenTicketItemPayload,
+  type UpdateKitchenTicketItemPayload,
+} from './KitchenTicketItemRepository'
+export {
+  KitchenStatusLogRepository,
+  type KitchenStatusLogDocument,
+  type CreateKitchenStatusLogPayload,
+  type UpdateKitchenStatusLogPayload,
+} from './KitchenStatusLogRepository'
+
+/**
  * Inventory Module Service
  * High-level business logic for inventory operations
  */
 export { InventoryService } from '../services/InventoryService'
+
+/**
+ * Notifications Module Repositories
+ * Handle notification data
+ */
+export {
+  NotificationRepository,
+  type NotificationDocument,
+  type CreateNotificationPayload,
+  type UpdateNotificationPayload,
+  type NotificationCounts,
+} from './NotificationRepository'
 
 /**
  * Re-export Firestore utilities
