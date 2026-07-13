@@ -1,13 +1,26 @@
 /**
  * Dashboard Service
- * Calculates dashboard metrics from database
+ * Calculates dashboard metrics from Firestore repositories
+ * 
+ * ARCHITECTURE (Phase 6.2.14):
+ * All metrics now use Firestore-backed repositories:
+ * - Revenue: BillingService → BillRepository (Firestore)
+ * - Orders: OrderRepository (Firestore)
+ * - Tables: RestaurantTableRepository (Firestore)
+ * - Customers: CustomerRepository (Firestore)
+ * 
+ * Pattern: DashboardService → Repositories → BaseRepository → Firestore
  */
 
-import { PrismaClient } from '@prisma/client'
 import { startOfDay, endOfDay } from 'date-fns'
 import { TenantContext } from '@/api/middleware/tenant'
+import { BillingService } from '@/src/services/BillingService'
+import { CustomerRepository, OrderRepository, RestaurantTableRepository } from '@/src/repositories'
 
-const prisma = new PrismaClient()
+const billingService = new BillingService()
+const customerRepo = new CustomerRepository()
+const orderRepo = new OrderRepository()
+const tableRepo = new RestaurantTableRepository()
 
 export interface DashboardSummary {
   todayRevenue: number
@@ -59,44 +72,23 @@ export const getDashboardSummary = async (
 
   try {
     // ─── Today's Revenue ───────────────────────────────────
-    const todayRevenue = await prisma.payment.aggregate({
-      where: {
-        organizationId: tenantContext.organizationId,
-        bill: {
-          branchId: branchId,
-        },
-        createdAt: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        paymentStatus: 'completed',
-        deletedAt: null,
-      },
-      _sum: {
-        amount: true,
-      },
-    })
+    // Use BillingService (Firestore-backed) to get revenue
+    const todayRevenueResult = await billingService.getRevenue(
+      todayStart,
+      todayEnd,
+      branchId,
+      tenantContext.organizationId
+    )
+    const todayRevenueAmount = todayRevenueResult.revenue
 
-    const yesterdayRevenue = await prisma.payment.aggregate({
-      where: {
-        organizationId: tenantContext.organizationId,
-        bill: {
-          branchId: branchId,
-        },
-        createdAt: {
-          gte: yesterdayStart,
-          lte: yesterdayEnd,
-        },
-        paymentStatus: 'completed',
-        deletedAt: null,
-      },
-      _sum: {
-        amount: true,
-      },
-    })
-
-    const todayRevenueAmount = Number(todayRevenue._sum.amount ?? 0)
-    const yesterdayRevenueAmount = Number(yesterdayRevenue._sum.amount ?? 0)
+    // Use BillingService to get revenue for yesterday
+    const yesterdayRevenueResult = await billingService.getRevenue(
+      yesterdayStart,
+      yesterdayEnd,
+      branchId,
+      tenantContext.organizationId
+    )
+    const yesterdayRevenueAmount = yesterdayRevenueResult.revenue
     const todayRevenueChangePercent =
       yesterdayRevenueAmount > 0
         ? ((todayRevenueAmount - yesterdayRevenueAmount) /
@@ -105,35 +97,22 @@ export const getDashboardSummary = async (
         : 0
 
     // ─── Today's Orders ────────────────────────────────────
-    const todayOrdersCount = await prisma.order.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        createdAt: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        status: {
-          notIn: ['cancelled', 'refunded'],
-        },
-        deletedAt: null,
-      },
-    })
+    // Use OrderRepository (Firestore)
+    const todayOrdersCount = await orderRepo.countByDateRange(
+      todayStart,
+      todayEnd,
+      branchId,
+      tenantContext.organizationId,
+      ['cancelled', 'refunded']
+    )
 
-    const yesterdayOrdersCount = await prisma.order.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        createdAt: {
-          gte: yesterdayStart,
-          lte: yesterdayEnd,
-        },
-        status: {
-          notIn: ['cancelled', 'refunded'],
-        },
-        deletedAt: null,
-      },
-    })
+    const yesterdayOrdersCount = await orderRepo.countByDateRange(
+      yesterdayStart,
+      yesterdayEnd,
+      branchId,
+      tenantContext.organizationId,
+      ['cancelled', 'refunded']
+    )
 
     const totalOrdersChange = todayOrdersCount - yesterdayOrdersCount
 
@@ -148,26 +127,23 @@ export const getDashboardSummary = async (
         : 0
 
     // ─── Table Occupancy ───────────────────────────────────
-    const occupiedTables = await prisma.restaurantTable.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        status: {
-          in: ['occupied', 'reserved'],
-        },
-        deletedAt: null,
-      },
-    })
+    // Use RestaurantTableRepository (Firestore)
+    const occupiedTables = await tableRepo.countByStatus(
+      branchId,
+      tenantContext.organizationId,
+      'occupied'
+    ) + await tableRepo.countByStatus(
+      branchId,
+      tenantContext.organizationId,
+      'reserved'
+    )
 
-    const totalActiveTables = await prisma.restaurantTable.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        status: {
-          notIn: ['maintenance'],
-        },
-        deletedAt: null,
-      },
+    const totalActiveTables = await tableRepo.count({
+      filters: [
+        { field: 'branchId', operator: '==', value: branchId },
+        { field: 'organizationId', operator: '==', value: tenantContext.organizationId },
+        { field: 'status', operator: '!=', value: 'maintenance' },
+      ],
     })
 
     const tableOccupancyPercent =
@@ -176,33 +152,23 @@ export const getDashboardSummary = async (
     // TODO: Calculate table occupancy change from yesterday
     const tableOccupancyChangePercent = 0
 
-    // ─── New Guests ────────────────────────────────────────
-    const newGuestsCount = await prisma.customer.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        createdAt: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        deletedAt: null,
-      },
-    })
+    // ─── New Guests (FIRESTORE-BACKED) ────────────────────
+    const newGuestsCount = await customerRepo.countByDateRange(
+      tenantContext.organizationId,
+      todayStart,
+      todayEnd
+    )
 
-    const yesterdayNewGuests = await prisma.customer.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        createdAt: {
-          gte: yesterdayStart,
-          lte: yesterdayEnd,
-        },
-        deletedAt: null,
-      },
-    })
+    const yesterdayNewGuests = await customerRepo.countByDateRange(
+      tenantContext.organizationId,
+      yesterdayStart,
+      yesterdayEnd
+    )
 
     const newGuestsChange = newGuestsCount - yesterdayNewGuests
 
     // ─── Satisfaction Rating ───────────────────────────────
-    // TODO: Implement satisfaction rating from customer_feedback table
+    // TODO: Implement satisfaction rating from customer_feedback collection
     const satisfactionRating = null
     const satisfactionChange = 0
 
@@ -242,25 +208,14 @@ export const getRevenueChartToday = async (
   const todayEnd = endOfDay(today)
 
   try {
-    const orders = await prisma.order.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        createdAt: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
-        status: {
-          notIn: ['cancelled', 'refunded'],
-        },
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        totalAmount: true,
-        createdAt: true,
-      },
-    })
+    // Use OrderRepository (Firestore)
+    const orders = await orderRepo.getOrdersForChart(
+      todayStart,
+      todayEnd,
+      branchId,
+      tenantContext.organizationId,
+      ['cancelled', 'refunded']
+    )
 
     // Group by hour
     const hourlyData: Record<number, { revenue: number; orders: number }> = {}
@@ -272,7 +227,7 @@ export const getRevenueChartToday = async (
     orders.forEach((order) => {
       const hour = order.createdAt.getHours()
       if (hourlyData[hour]) {
-        hourlyData[hour].revenue += Number(order.totalAmount)
+        hourlyData[hour].revenue += parseFloat(order.totalAmount)
         hourlyData[hour].orders += 1
       }
     })
@@ -335,25 +290,14 @@ export const getRevenueChartWeek = async (
   weekStart.setDate(weekStart.getDate() - weekStart.getDay())
 
   try {
-    const orders = await prisma.order.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        createdAt: {
-          gte: startOfDay(weekStart),
-          lte: endOfDay(today),
-        },
-        status: {
-          notIn: ['cancelled', 'refunded'],
-        },
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        totalAmount: true,
-        createdAt: true,
-      },
-    })
+    // Use OrderRepository (Firestore)
+    const orders = await orderRepo.getOrdersForChart(
+      startOfDay(weekStart),
+      endOfDay(today),
+      branchId,
+      tenantContext.organizationId,
+      ['cancelled', 'refunded']
+    )
 
     // Group by day
     const dailyData: Record<
@@ -368,7 +312,7 @@ export const getRevenueChartWeek = async (
 
     orders.forEach((order) => {
       const day = days[order.createdAt.getDay()]
-      dailyData[day].revenue += Number(order.totalAmount)
+      dailyData[day].revenue += parseFloat(order.totalAmount)
       dailyData[day].orders += 1
     })
 

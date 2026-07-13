@@ -10,7 +10,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
@@ -20,8 +19,10 @@ import {
   rupeesToPaise,
   getRazorpayKeyId,
 } from '@/lib/razorpay'
+import { BillRepository, PaymentRepository } from '@/src/repositories'
 
-const prisma = new PrismaClient()
+const billRepo = new BillRepository()
+const paymentRepo = new PaymentRepository()
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,25 +37,17 @@ export async function POST(request: NextRequest) {
     const tenantContext = extractTenantContext(authContext)
 
     // Fetch the bill
-    const bill = await prisma.bill.findUnique({
-      where: { id: billId },
-      include: {
-        order: {
-          include: {
-            items: true,
-          },
-        },
-      },
-    })
+    const bill = await billRepo.findById(billId)
 
-    if (!bill) {
+    if (!bill || bill.organizationId !== tenantContext.organizationId) {
       throw new ValidationError('Bill not found')
     }
 
     // Validate amount doesn't exceed balance
-    if (amount > Number(bill.balanceDue)) {
+    const balanceDue = parseFloat(bill.balanceDue as any)
+    if (amount > balanceDue) {
       throw new ValidationError(
-        `Payment amount cannot exceed balance due (₹${Number(bill.balanceDue)})`
+        `Payment amount cannot exceed balance due (₹${balanceDue})`
       )
     }
 
@@ -72,20 +65,21 @@ export async function POST(request: NextRequest) {
     })
 
     // Store the Razorpay order ID in database for tracking
-    await prisma.payment.create({
-      data: {
-        organizationId: tenantContext.organizationId,
+    await paymentRepo.create(
+      {
         billId: bill.id,
-        orderId: bill.orderId || null,
-        customerId: bill.customerId || null,
-        amount: bill.totalAmount, // Will be updated after successful payment
+        orderId: bill.orderId,
+        customerId: bill.customerId,
+        amount: parseFloat(bill.totalAmount as any).toFixed(2),
         paymentMethod: 'online_payment',
         paymentStatus: 'pending',
         referenceNumber: razorpayOrder.id,
         transactionId: null,
         notes: `Razorpay order created. Amount: ₹${amount}`,
       },
-    })
+      authContext.userId,
+      tenantContext.organizationId
+    )
 
     return NextResponse.json(
       successResponse({

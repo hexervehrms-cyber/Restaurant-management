@@ -1,16 +1,18 @@
 /**
  * GET /api/inventory/items?branchId=<id>&search=""&lowStock=false
  * Get inventory items for a branch
+ * 
+ * Migrated to use InventoryService and Firestore repositories
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
+import { InventoryService } from '@/repositories'
 
-const prisma = new PrismaClient()
+const inventoryService = new InventoryService()
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,42 +27,53 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    const where: any = {
+    // Fetch inventory items using InventoryService
+    let items = await inventoryService.getInventoryItemsByBranch(
       branchId,
-      restaurantId: tenantContext.restaurantId,
-      organizationId: tenantContext.organizationId,
-    }
+      tenantContext.restaurantId,
+      tenantContext.organizationId
+    )
 
+    // Apply search filter
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' }
+      const searchLower = search.toLowerCase()
+      items = items.filter(
+        (item) =>
+          item.itemName.toLowerCase().includes(searchLower) ||
+          item.itemCode?.toLowerCase().includes(searchLower)
+      )
     }
 
-    const items = await prisma.inventoryItem.findMany({
-      where,
-      orderBy: { name: 'asc' },
-      take: 100,
-    })
-
+    // Format response matching existing contract
     const formatted = items
       .map((item) => {
-        const status = item.currentQuantity < (item.reorderLevel || 0)
+        const quantity = typeof item.quantityInStock === 'number'
+          ? item.quantityInStock
+          : 0
+        const reorder = typeof item.reorderLevel === 'number'
+          ? item.reorderLevel
+          : 0
+        
+        const status = quantity < reorder
           ? 'low'
-          : item.currentQuantity < ((item.reorderLevel || 0) * 0.5)
+          : quantity < (reorder * 0.5)
             ? 'critical'
             : 'ok'
 
         return {
           id: item.id,
-          name: item.name,
-          sku: item.sku,
-          category: item.category,
-          quantity: item.currentQuantity,
-          unit: item.unit,
-          reorderLevel: item.reorderLevel || 0,
-          price: item.costPrice || 0,
-          supplier: item.supplier || '',
-          lastRestockDate: item.lastRestockDate?.toISOString().split('T')[0] || '',
-          expiryDate: item.expiryDate?.toISOString().split('T')[0] || '',
+          name: item.itemName,
+          sku: item.itemCode || '',
+          category: item.category || '',
+          quantity,
+          unit: item.unitOfMeasure || '',
+          reorderLevel: reorder,
+          price: typeof item.costPerUnit === 'number' ? item.costPerUnit : 0,
+          supplier: item.supplierId || '',
+          lastRestockDate: item.lastCountedAt
+            ? new Date(item.lastCountedAt as any).toISOString().split('T')[0]
+            : '',
+          expiryDate: '',
           status,
         }
       })
@@ -69,14 +82,16 @@ export async function GET(request: NextRequest) {
     const criticalCount = formatted.filter((i) => i.status === 'critical').length
     const lowStockCount = formatted.filter((i) => i.status === 'low').length
 
-    return NextResponse.json(successResponse({
-      data: formatted,
-      meta: {
-        total: formatted.length,
-        lowStockCount,
-        criticalCount,
-      },
-    }))
+    return NextResponse.json(
+      successResponse({
+        data: formatted,
+        meta: {
+          total: formatted.length,
+          lowStockCount,
+          criticalCount,
+        },
+      })
+    )
   } catch (error: any) {
     console.error('Error fetching inventory items:', error)
 

@@ -1,12 +1,12 @@
 /**
  * Orders Service
- * Handles order-related queries
+ * Handles order-related queries - Firestore-backed
  */
 
-import { PrismaClient } from '@prisma/client'
 import { TenantContext } from '@/api/middleware/tenant'
+import { OrderRepository } from '@/src/repositories'
 
-const prisma = new PrismaClient()
+const orderRepo = new OrderRepository()
 
 export interface LiveOrder {
   id: string
@@ -43,42 +43,29 @@ export const getLiveOrders = async (
       'ready',
     ]
 
-    const orders = await prisma.order.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        status: {
-          in: activeStatuses as any[],
-        },
-        deletedAt: null,
-      },
-      include: {
-        table: true,
-        items: {
-          include: {
-            menuItem: true,
-          },
-        },
-        createdBy: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50,
+    const orders = await orderRepo.findMany({
+      filters: [
+        { field: 'organizationId', operator: '==', value: tenantContext.organizationId },
+        { field: 'branchId', operator: '==', value: branchId },
+        { field: 'status', operator: 'in', value: activeStatuses },
+        { field: 'isDeleted', operator: '==', value: false },
+      ],
+      orderBy: [{ field: 'createdAt', direction: 'desc' }],
+      limit: 50,
     })
 
     const formattedOrders: LiveOrder[] = orders.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
-      tableNumber: order.table?.tableNumber ?? null,
+      tableNumber: order.tableNumber || null,
       status: order.status,
-      items: order.items.map((item) => ({
+      items: order.items ? order.items.map((item: any) => ({
         name: item.itemName,
         quantity: item.quantity,
-      })),
-      totalAmount: order.totalAmount,
-      createdAt: order.createdAt,
-      waiterName: order.createdBy?.firstName ?? null,
+      })) : [],
+      totalAmount: parseFloat(order.totalAmount as any),
+      createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt as any),
+      waiterName: order.createdByName || null,
     }))
 
     return {
@@ -99,24 +86,11 @@ export const getOrderById = async (
   tenantContext: TenantContext
 ) => {
   try {
-    const order = await prisma.order.findFirst({
-      where: {
-        id: orderId,
-        organizationId: tenantContext.organizationId,
-        deletedAt: null,
-      },
-      include: {
-        items: {
-          include: {
-            menuItem: true,
-            modifiers: true,
-          },
-        },
-        table: true,
-        customer: true,
-        createdBy: true,
-      },
-    })
+    const order = await orderRepo.findById(orderId)
+    
+    if (!order || order.organizationId !== tenantContext.organizationId) {
+      return null
+    }
 
     return order
   } catch (error) {

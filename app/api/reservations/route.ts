@@ -4,13 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
+import { ReservationService } from '@/backend/src/services/ReservationService'
 
-const prisma = new PrismaClient()
+const reservationService = new ReservationService()
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,14 +28,12 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Build query
-    const where: any = {
-      branch: {
-        id: branchId,
-        restaurantId: tenantContext.restaurantId,
-        organization: { id: tenantContext.organizationId },
-      },
-    }
+    // Fetch reservations with filtering
+    let reservations = await reservationService.getReservationsByBranch(
+      branchId,
+      tenantContext.organizationId,
+      status !== 'all' ? (status as any) : undefined
+    )
 
     // Filter by date if provided
     if (date === 'today') {
@@ -43,29 +41,23 @@ export async function GET(request: NextRequest) {
       today.setHours(0, 0, 0, 0)
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      
-      where.reservationTime = {
-        gte: today,
-        lt: tomorrow,
-      }
+
+      reservations = reservations.filter(
+        (r) =>
+          new Date(r.reservationDate).getTime() >= today.getTime() &&
+          new Date(r.reservationDate).getTime() < tomorrow.getTime()
+      )
     }
 
-    // Filter by status
-    if (status !== 'all') {
-      where.status = status
-    }
-
-    // Fetch reservations with related data
-    const reservations = await prisma.reservation.findMany({
-      where,
-      include: {
-        table: true,
-        customer: true,
-        payments: true,
-      },
-      orderBy: { reservationTime: 'asc' },
-      take: 100,
+    // Sort by reservation time
+    reservations.sort((a, b) => {
+      const timeA = new Date(a.reservationTime).getTime()
+      const timeB = new Date(b.reservationTime).getTime()
+      return timeA - timeB
     })
+
+    // Limit to 100 results
+    reservations = reservations.slice(0, 100)
 
     // Format response
     const formattedReservations = reservations.map((r) => ({
@@ -74,34 +66,33 @@ export async function GET(request: NextRequest) {
       customerPhone: r.guestPhone,
       customerEmail: r.guestEmail || '',
       tableId: r.tableId,
-      tableNumber: parseInt(r.table.tableNumber),
-      date: r.reservationDate.toISOString().split('T')[0],
-      time: r.reservationTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      reservationTime: new Date(
-        r.reservationDate.toISOString().split('T')[0] + 'T' + 
-        r.reservationTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-      ).toISOString(),
+      tableNumber: r.tableId ? parseInt(r.tableId) : 0,
+      date: new Date(r.reservationDate).toISOString().split('T')[0],
+      time: new Date(r.reservationTime).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      reservationTime: r.reservationTime,
       guestCount: r.numberOfGuests,
-      status: r.status.toLowerCase(),
-      specialRequests: r.specialRequests || '',
+      status: r.status,
       notes: r.notes || '',
-      prepayment: Number(r.advancePaymentAmount) || 0,
-      createdAt: r.createdAt.toISOString(),
+      prepayment: typeof r.advancePaymentAmount === 'number'
+        ? r.advancePaymentAmount
+        : typeof r.advancePaymentAmount === 'string'
+        ? parseFloat(r.advancePaymentAmount)
+        : 0,
+      createdAt: r.createdAt,
     }))
 
-    return NextResponse.json(successResponse(
-      formattedReservations,
-      'Success',
-      {
-        total: formattedReservations.length,
-        statuses: {
-          confirmed: formattedReservations.filter((r) => r.status === 'confirmed').length,
-          pending: formattedReservations.filter((r) => r.status === 'pending').length,
-          seated: formattedReservations.filter((r) => r.status === 'checked_in').length,
-          cancelled: formattedReservations.filter((r) => r.status === 'cancelled').length,
-        },
-      }
-    ))
+    return NextResponse.json(successResponse(formattedReservations, 'Success', {
+      total: formattedReservations.length,
+      statuses: {
+        confirmed: formattedReservations.filter((r) => r.status === 'confirmed').length,
+        pending: formattedReservations.filter((r) => r.status === 'pending').length,
+        seated: formattedReservations.filter((r) => r.status === 'checked_in').length,
+        cancelled: formattedReservations.filter((r) => r.status === 'cancelled').length,
+      },
+    }))
   } catch (error: any) {
     console.error('Error fetching reservations:', error)
 
@@ -128,49 +119,82 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    const { guestName, guestPhone, guestEmail, branchId, tableId, reservationDate, reservationTime, numberOfGuests, specialRequests, notes } = body
+    const {
+      guestName,
+      guestPhone,
+      guestEmail,
+      branchId,
+      tableId,
+      reservationDate,
+      reservationTime,
+      numberOfGuests,
+      notes,
+    } = body
 
-    if (!guestName || !guestPhone || !branchId || !tableId || !reservationDate || !reservationTime || !numberOfGuests) {
-      throw new ValidationError('Missing required fields: guestName, guestPhone, branchId, tableId, reservationDate, reservationTime, numberOfGuests')
+    if (
+      !guestName ||
+      !guestPhone ||
+      !branchId ||
+      !tableId ||
+      !reservationDate ||
+      !reservationTime ||
+      !numberOfGuests
+    ) {
+      throw new ValidationError(
+        'Missing required fields: guestName, guestPhone, branchId, tableId, reservationDate, reservationTime, numberOfGuests'
+      )
     }
 
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
     // Create reservation
-    const reservation = await prisma.reservation.create({
-      data: {
+    const result = await reservationService.createReservation(
+      {
         guestName,
         guestPhone,
         guestEmail: guestEmail || null,
-        tableId,
-        branchId,
-        restaurantId: tenantContext.restaurantId,
-        organizationId: tenantContext.organizationId,
+        numberOfGuests,
         reservationDate: new Date(reservationDate),
         reservationTime: new Date(reservationTime),
-        numberOfGuests,
-        specialRequests: specialRequests || null,
-        notes: notes || null,
+        durationMinutes: 120,
         status: 'pending',
+        tableId: tableId as any,
+        customerId: null,
+        advancePaymentAmount: 0,
+        advancePaymentStatus: null,
+        cancellationReason: null,
+        noShowReason: null,
+        notes: notes || null,
+        source: null,
+        externalReferenceId: null,
+        metadata: {},
       },
-      include: {
-        table: true,
-      },
-    })
+      authContext.userId || 'system',
+      tenantContext.organizationId
+    )
+
+    if (!result.success) {
+      return NextResponse.json(
+        errorResponse(result.error || 'Failed to create reservation', 'RESERVATIONS_ERROR'),
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
-      successResponse({
-        id: reservation.id,
-        guestName: reservation.guestName,
-        guestPhone: reservation.guestPhone,
-        tableId: reservation.tableId,
-        tableNumber: parseInt(reservation.table.tableNumber),
-        reservationDate: reservation.reservationDate.toISOString(),
-        reservationTime: reservation.reservationTime.toISOString(),
-        numberOfGuests: reservation.numberOfGuests,
-        status: reservation.status.toLowerCase(),
-      }),
+      successResponse(
+        {
+          id: result.data?.id,
+          guestName: result.data?.guestName,
+          guestPhone: result.data?.guestPhone,
+          tableId: result.data?.tableId,
+          reservationDate: result.data?.reservationDate,
+          reservationTime: result.data?.reservationTime,
+          numberOfGuests: result.data?.numberOfGuests,
+          status: result.data?.status,
+        },
+        'Reservation created successfully'
+      ),
       { status: 201 }
     )
   } catch (error: any) {

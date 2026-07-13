@@ -1,6 +1,14 @@
 /**
  * GET /api/dashboard/sidebar-counts?branchId=<id>
  * Get sidebar badge counts
+ * 
+ * ARCHITECTURE (Phase 6.2.14):
+ * All metrics use Firestore-backed repositories:
+ * - Inventory alerts: InventoryService (Firestore)
+ * - Reservations: ReservationService (Firestore)
+ * - Kitchen: KitchenService (Firestore)
+ * - Live orders: OrderRepository (Firestore)
+ * - POS: Prisma (not yet in migration scope)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -9,9 +17,15 @@ import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-import { startOfDay, endOfDay } from 'date-fns'
+import { InventoryService, OrderRepository } from '@/repositories'
+import { ReservationService } from '@/backend/src/services/ReservationService'
+import { KitchenService } from '@/backend/src/services/KitchenService'
 
 const prisma = new PrismaClient()
+const inventoryService = new InventoryService()
+const reservationService = new ReservationService()
+const kitchenService = new KitchenService()
+const orderRepo = new OrderRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,50 +43,35 @@ export async function GET(request: NextRequest) {
     // Extract tenant context
     const tenantContext = extractTenantContext(authContext)
 
-    const today = new Date()
-    const todayStart = startOfDay(today)
-    const todayEnd = endOfDay(today)
+    // Get active reservations count (using Firestore)
+    const pendingCount = await reservationService.getReservationCountByStatus(
+      'pending',
+      branchId,
+      tenantContext.organizationId
+    )
+    
+    const confirmedCount = await reservationService.getReservationCountByStatus(
+      'confirmed',
+      branchId,
+      tenantContext.organizationId
+    )
 
-    // Get active reservations count
-    const reservationsCount = await prisma.reservation.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        reservationDate: today,
-        status: {
-          in: ['pending', 'confirmed'],
-        },
-        deletedAt: null,
-      },
-    })
+    const reservationsCount = pendingCount + confirmedCount
 
-    // Get live orders count
-    const liveOrdersCount = await prisma.order.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        status: {
-          in: [
-            'pending',
-            'confirmed',
-            'preparing',
-            'ready',
-          ],
-        },
-        deletedAt: null,
-      },
-    })
+    // Get live orders count (use OrderRepository - Firestore)
+    const liveOrdersCount = await orderRepo.getLiveOrders(
+      branchId,
+      tenantContext.organizationId
+    ).then(orders => orders.length)
 
-    // Get inventory alerts count
-    const inventoryAlertsCount = await prisma.lowStockAlert.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        alertStatus: 'active',
-      },
-    })
+    // Get inventory alerts count (using InventoryService + Firestore)
+    const inventoryAlertsCount = await inventoryService.countActiveLowStockAlerts(
+      branchId,
+      tenantContext.restaurantId,
+      tenantContext.organizationId
+    )
 
-    // Check if POS is live (open cash register session)
+    // Check if POS is live (using Prisma - not in Inventory scope)
     const posSession = await prisma.cashRegisterSession.findFirst({
       where: {
         organizationId: tenantContext.organizationId,
@@ -83,17 +82,11 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Check if kitchen is live (active kitchen tickets)
-    const kitchenTickets = await prisma.kitchenTicket.count({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        status: {
-          in: ['pending', 'preparing'],
-        },
-        deletedAt: null,
-      },
-    })
+    // Check if kitchen is live (using Firestore)
+    const kitchenLiveStatus = await kitchenService.getKitchenLiveStatus(
+      branchId,
+      tenantContext.organizationId
+    )
 
     return NextResponse.json(
       successResponse({
@@ -101,7 +94,7 @@ export async function GET(request: NextRequest) {
         liveOrders: liveOrdersCount,
         inventoryAlerts: inventoryAlertsCount,
         posLive: !!posSession,
-        kitchenLive: kitchenTickets > 0,
+        kitchenLive: kitchenLiveStatus.isLive,
       })
     )
   } catch (error: any) {

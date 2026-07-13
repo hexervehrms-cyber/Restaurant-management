@@ -306,3 +306,121 @@ export interface QueryListenerOptions {
  * Listener unsubscribe function
  */
 export type UnsubscribeFunction = () => void
+
+// ============= CUSTOMER MODULE TYPES =============
+
+/**
+ * Re-export Customer module document types
+ */
+export type {
+  CustomerDocument,
+  CreateCustomerPayload,
+  UpdateCustomerPayload,
+  CustomerAddressDocument,
+  CreateCustomerAddressPayload,
+  UpdateCustomerAddressPayload,
+  CustomerNoteDocument,
+  CreateCustomerNotePayload,
+  UpdateCustomerNotePayload,
+  CustomerLoyaltyPointsDocument,
+  CreateCustomerLoyaltyPointsPayload,
+  UpdateCustomerLoyaltyPointsPayload,
+  CustomerWithDetails,
+  CustomerSearchResult,
+  CRMCustomerView,
+} from './customer'
+
+// ============= INVENTORY MODULE TYPES =============
+
+/**
+ * Re-export Inventory module document types
+ */
+export type {
+  InventoryItemDocument,
+  CreateInventoryItemPayload,
+  UpdateInventoryItemPayload,
+  SupplierDocument,
+  CreateSupplierPayload,
+  UpdateSupplierPayload,
+  PurchaseOrderDocument,
+  CreatePurchaseOrderPayload,
+  UpdatePurchaseOrderPayload,
+  PurchaseOrderItemDocument,
+  CreatePurchaseOrderItemPayload,
+  UpdatePurchaseOrderItemPayload,
+  StockMovementDocument,
+  CreateStockMovementPayload,
+  UpdateStockMovementPayload,
+  StockAdjustmentDocument,
+  CreateStockAdjustmentPayload,
+  UpdateStockAdjustmentPayload,
+  LowStockAlertDocument,
+  CreateLowStockAlertPayload,
+  UpdateLowStockAlertPayload,
+} from './inventory'
+
+// ============= RESERVATIONS MODULE TYPES =============
+
+/**
+ * Re-export Reservations module document types
+ */
+export type {
+  ReservationDocument,
+  CreateReservationPayload,
+  UpdateReservationPayload,
+  ReservationPaymentDocument,
+  CreateReservationPaymentPayload,
+  UpdateReservationPaymentPayload,
+  ReservationNoShowLogDocument,
+  CreateReservationNoShowLogPayload,
+  UpdateReservationNoShowLogPayload,
+  ReservationWithDetails,
+  ReservationSearchResult,
+  ReservationListItem,
+  ReservationStatus,
+  PaymentStatus,
+  PaymentMethod,
+} from './reservations'
+
+// ============= KITCHEN MODULE TYPES =============
+
+/**
+ * Re-export Kitchen module document types
+ */
+export type {
+  KitchenSectionDocument,
+  CreateKitchenSectionPayload,
+  UpdateKitchenSectionPayload,
+  KitchenTicketDocument,
+  CreateKitchenTicketPayload,
+  UpdateKitchenTicketPayload,
+  KitchenTicketItemDocument,
+  CreateKitchenTicketItemPayload,
+  UpdateKitchenTicketItemPayload,
+  KitchenStatusLogDocument,
+  CreateKitchenStatusLogPayload,
+  UpdateKitchenStatusLogPayload,
+  KitchenTicketWithDetails,
+  KitchenTicketSearchResult,
+  KitchenDashboardItem,
+  KitchenLiveStatus,
+  KitchenTicketStatus,
+  KitchenSectionType,
+} from './kitchen'
+
+// ============= NOTIFICATIONS MODULE TYPES =============
+
+/**
+ * Re-export Notifications module document types
+ */
+export type {
+  NotificationDocument,
+  CreateNotificationPayload,
+  UpdateNotificationPayload,
+  NotificationWithFormatting,
+  NotificationListItem,
+  NotificationCounts,
+  NotificationType,
+  NotificationStatus,
+  NotificationChannel,
+} from './notifications'

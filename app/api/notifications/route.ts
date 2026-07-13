@@ -4,11 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { NotificationRepository } from '@/backend/src/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 
-const prisma = new PrismaClient()
+const notificationRepository = new NotificationRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,26 +21,14 @@ export async function GET(request: NextRequest) {
     // TODO: Extract real auth context from JWT token
     const authContext = getMockAuthContext()
 
-    // Fetch notifications for current user
-    const notifications = await prisma.notification.findMany({
-      where: {
-        organizationId: authContext.organizationId,
-        userId: authContext.userId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        notificationType: true,
-        title: true,
-        message: true,
-        isRead: true,
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: limit,
-    })
+    // Fetch notifications for current user using Firestore
+    const notifications = await notificationRepository.findByUser(
+      authContext.userId,
+      authContext.organizationId,
+      {
+        limit,
+      }
+    )
 
     // Format for response
     const formattedNotifications = notifications.map((notif) => ({
@@ -67,9 +55,10 @@ export async function GET(request: NextRequest) {
 /**
  * Helper to format time ago
  */
-function getTimeAgo(date: Date): string {
+function getTimeAgo(date: Date | any): string {
+  const dateObj = date instanceof Date ? date : new Date(date)
   const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const diffMs = now.getTime() - dateObj.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
@@ -79,5 +68,6 @@ function getTimeAgo(date: Date): string {
   if (diffHours < 24) return `${diffHours}h ago`
   if (diffDays < 7) return `${diffDays}d ago`
 
-  return date.toLocaleDateString()
+  return dateObj.toLocaleDateString()
 }
+

@@ -14,13 +14,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient, Prisma } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
+import { BillingService, RecordPaymentRequest } from '@/services/BillingService'
 
-const prisma = new PrismaClient()
+const billingService = new BillingService()
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,74 +42,29 @@ export async function POST(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Fetch the bill
-    const bill = await prisma.bill.findUnique({
-      where: { id: billId },
-    })
-
-    if (!bill) {
-      throw new ValidationError('Bill not found')
+    // Use BillingService to record payment
+    const paymentRequest: RecordPaymentRequest = {
+      billId,
+      amount,
+      paymentMethod,
+      referenceNumber: referenceNumber || undefined,
+      transactionId: transactionId || undefined,
+      notes: notes || undefined,
     }
 
-    // Validate payment amount doesn't exceed balance
-    if (new Prisma.Decimal(amount).gt(bill.balanceDue)) {
-      throw new ValidationError(
-        `Payment amount cannot exceed balance due (₹${Number(bill.balanceDue)})`
-      )
-    }
+    const result = await billingService.recordPayment(paymentRequest, authContext.userId)
 
-    // Create payment record
-    const payment = await prisma.payment.create({
-      data: {
-        organizationId: tenantContext.organizationId,
-        billId,
-        orderId: bill.orderId || null,
-        customerId: bill.customerId || null,
-        amount: new Prisma.Decimal(amount),
-        paymentMethod: paymentMethod as any,
-        paymentStatus: 'completed',
-        referenceNumber: referenceNumber || null,
-        transactionId: transactionId || null,
-        receivedById: authContext.userId,
-        notes: notes || null,
-      },
-    })
-
-    // Update bill with payment
-    const newAmountPaid = bill.amountPaid.plus(new Prisma.Decimal(amount))
-    const newBalanceDue = bill.balanceDue.minus(new Prisma.Decimal(amount))
-    const isFullyPaid = newBalanceDue.lte(new Prisma.Decimal(0))
-
-    const updatedBill = await prisma.bill.update({
-      where: { id: billId },
-      data: {
-        amountPaid: newAmountPaid,
-        balanceDue: newBalanceDue,
-        paymentStatus: isFullyPaid ? 'completed' : 'pending',
-        billStatus: isFullyPaid ? 'paid' : 'open',
-        settledAt: isFullyPaid ? new Date() : null,
-        settledById: isFullyPaid ? authContext.userId : null,
-      },
-    })
-
-    // Update order payment status if bill is fully paid
-    if (isFullyPaid && bill.orderId) {
-      await prisma.order.update({
-        where: { id: bill.orderId },
-        data: {
-          paymentStatus: 'completed',
-        },
-      })
+    if (!result.success) {
+      throw new ValidationError(result.error || 'Failed to record payment')
     }
 
     return NextResponse.json(
       successResponse({
-        paymentId: payment.id,
-        amount: Number(payment.amount),
-        billStatus: updatedBill.billStatus,
-        amountPaid: Number(updatedBill.amountPaid),
-        balanceDue: Number(updatedBill.balanceDue),
-        isFullyPaid,
+        paymentId: result.paymentId,
+        billId: billId,
+        amount: amount,
+        paymentMethod: paymentMethod,
+        status: 'completed',
       }),
       { status: 201 }
     )
