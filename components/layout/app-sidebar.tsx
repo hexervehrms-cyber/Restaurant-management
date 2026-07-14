@@ -1,14 +1,13 @@
 'use client'
 
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, UtensilsCrossed, TableProperties, CalendarDays,
   ChefHat, ShoppingCart, BarChart3, Package, Users, Settings,
-  CreditCard, Zap, ChevronDown, ChevronRight, PanelLeftClose,
-  LogOut,
+  CreditCard, Zap, ChevronDown, Building2, ChevronRight, PanelLeftClose,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +24,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/context/AuthContext'
 
+/**
+ * Sign Out Menu Item
+ * Handles logout and redirect to login page
+ */
 function SignOutMenuItem() {
   const router = useRouter()
   const { logout } = useAuth()
@@ -46,115 +49,60 @@ function SignOutMenuItem() {
     <DropdownMenuItem 
       onClick={handleSignOut}
       disabled={isLoading}
-      className="gap-2 text-destructive cursor-pointer"
+      className="text-destructive cursor-pointer"
     >
-      <LogOut className="size-3.5" strokeWidth={1.75} />
       {isLoading ? 'Signing out...' : 'Sign Out'}
     </DropdownMenuItem>
   )
 }
 
-function LiveBadge() {
+/**
+ * Premium Location Switcher Component
+ * Displays current restaurant/branch with branded styling and hover effects
+ */
+function PremiumLocationSwitcher() {
   return (
-    <div className="flex items-center gap-1.5 px-2 py-1 rounded-sm bg-success/10 border border-success/30">
-      <span className="relative inline-flex size-1.5 rounded-full bg-success animate-pulse" />
-      <span className="text-xs font-semibold text-success">Live</span>
+    <div className="rounded-xl bg-gradient-to-br from-primary/8 via-primary/5 to-transparent border border-primary/15 p-3 space-y-2">
+      {/* Badge */}
+      <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-primary/10 w-fit">
+        <div className="size-2 rounded-full bg-primary" />
+        <span className="text-xs font-medium text-primary">Premium Account</span>
+      </div>
+
+      {/* Location Info */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <Building2 className="size-4 text-primary/60" />
+          <span className="font-semibold text-sm text-foreground">Spice Garden</span>
+        </div>
+        <p className="text-xs text-muted-foreground pl-6">Mumbai Central Branch</p>
+      </div>
     </div>
   )
 }
 
-function CountBadge({ count }: { count: string }) {
+/**
+ * Premium Live Indicator Component
+ * Shows active status with animated pulse
+ */
+function PremiumLiveIndicator() {
   return (
-    <Badge 
-      variant="secondary" 
-      className="text-xs font-semibold px-2 py-0.5 bg-muted/70 text-muted-foreground"
-    >
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/10 border border-success/20">
+      <span className="size-2 rounded-full bg-success animate-pulse" />
+      <span className="text-xs font-medium text-success/80">Live</span>
+    </div>
+  )
+}
+
+/**
+ * Premium Counter Badge Component
+ * Shows count with subtle styling
+ */
+function PremiumCountBadge({ count }: { count: string }) {
+  return (
+    <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-md text-xs font-semibold bg-muted text-foreground ring-1 ring-border/40">
       {count}
-    </Badge>
-  )
-}
-
-function GroupToggle({ 
-  isExpanded, 
-  onClick 
-}: { 
-  isExpanded: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center justify-center w-5 h-5 rounded transition-all duration-200 hover:bg-sidebar-accent/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
-      title={isExpanded ? 'Collapse group' : 'Expand group'}
-      aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
-    >
-      <ChevronRight 
-        className={cn(
-          "size-3.5 text-muted-foreground/60 transition-all duration-300 ease-out",
-          isExpanded && "rotate-90"
-        )}
-        strokeWidth={1.75}
-      />
-    </button>
-  )
-}
-
-function NavItem({
-  item,
-  isActive,
-}: {
-  item: { label: string; href: string; icon: any; badge?: string }
-  isActive: boolean
-}) {
-  const Icon = item.icon
-
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={isActive}
-        className={cn(
-          "relative group transition-all duration-200",
-          "hover:bg-sidebar-accent/50 active:scale-[0.98]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50",
-          isActive && "bg-primary/10 font-semibold shadow-sm"
-        )}
-      >
-        <Link href={item.href} className="flex items-center gap-2.5">
-          {isActive && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-primary/80 to-primary rounded-r-md transition-all duration-300" />
-          )}
-
-          <span
-            className={cn(
-              "flex items-center justify-center size-6 rounded-md shrink-0 transition-all duration-200",
-              isActive ? "bg-primary/15" : "bg-transparent"
-            )}
-          >
-            <Icon 
-              className={cn(
-                "size-4 transition-all duration-200",
-                isActive ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground/80"
-              )}
-              strokeWidth={1.75}
-            />
-          </span>
-
-          <span className={cn(
-            "flex-1 text-sm truncate transition-all duration-200",
-            isActive ? "text-foreground font-semibold" : "text-muted-foreground group-hover:text-foreground/80"
-          )}>
-            {item.label}
-          </span>
-
-          {item.badge && (
-            <div className="ml-auto shrink-0 transition-all duration-200">
-              {item.badge === 'Live' ? <LiveBadge /> : <CountBadge count={item.badge} />}
-            </div>
-          )}
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    </span>
   )
 }
 
@@ -197,162 +145,215 @@ export function AppSidebar() {
     Business: true,
   })
 
-  const toggleGroup = useCallback((label: string) => {
+  const toggleGroup = (label: string) => {
     setExpandedGroups(prev => ({
       ...prev,
       [label]: !prev[label],
     }))
-  }, [])
-
-  const renderedGroups = useMemo(() => {
-    return navGroups.map((group) => {
-      const isExpanded = expandedGroups[group.label] !== false
-
-      return (
-        <SidebarGroup key={group.label} className="gap-2.5">
-          <div className="flex items-center justify-between px-4 gap-2">
-            <SidebarGroupLabel className="text-xs font-bold text-muted-foreground/60 uppercase tracking-[0.12em] px-0 transition-colors duration-200">
-              {group.label}
-            </SidebarGroupLabel>
-            <GroupToggle 
-              isExpanded={isExpanded} 
-              onClick={() => toggleGroup(group.label)}
-            />
-          </div>
-
-          <div className="h-px bg-gradient-to-r from-sidebar-border/50 to-sidebar-border/0 mx-4 transition-opacity duration-200" />
-
-          {isExpanded && (
-            <SidebarMenu className="gap-1.5 px-2 animate-in fade-in duration-200">
-              {group.items.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <NavItem 
-                    key={item.href}
-                    item={item}
-                    isActive={isActive}
-                  />
-                )
-              })}
-            </SidebarMenu>
-          )}
-        </SidebarGroup>
-      )
-    })
-  }, [pathname, expandedGroups, toggleGroup])
+  }
 
   return (
     <Sidebar 
-      collapsible="icon"
+      collapsible="icon" 
       className={cn(
-        "border-r border-sidebar-border/30 bg-sidebar/95 backdrop-blur-sm",
-        "shadow-md transition-all duration-300"
+        "border-r border-border/40 bg-background",
+        "shadow-[inset_1px_0_0_0_rgba(255,255,255,0.05)]"
       )}
     >
-      <SidebarHeader className="border-b border-sidebar-border/20 px-4 py-4 gap-0 bg-gradient-to-b from-sidebar/50 to-sidebar/0">
-        <div className="flex items-center justify-between gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger 
-              className={cn(
-                "flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-lg",
-                "bg-sidebar-accent/30 hover:bg-sidebar-accent/60 transition-all duration-200",
-                "border border-sidebar-border/20 hover:border-sidebar-border/40",
-                "cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50",
-                "active:scale-95 shadow-sm hover:shadow-md"
-              )}
-              aria-label="Switch restaurant"
-            >
-              <div className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-primary shrink-0 ring-1 ring-primary/30 group-hover:ring-primary/50 group-hover:bg-primary/20 transition-all duration-200">
-                <span className="text-xs font-bold tracking-tight">SG</span>
-              </div>
-              <div className="flex flex-col gap-1 leading-none min-w-0 text-left">
-                <span className="font-semibold text-sm text-foreground truncate">Spice Garden</span>
-                <span className="text-xs text-muted-foreground/70 truncate">Mumbai Central</span>
-              </div>
-              <ChevronDown className="size-3.5 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground/60 transition-colors duration-200" strokeWidth={1.75} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="start">
-              <DropdownMenuItem className="gap-2">
-                <span className="flex size-5 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">SG</span>
-                <span>Spice Garden — Mumbai</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2">
-                <span className="flex size-5 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">SG</span>
-                <span>Spice Garden — Pune</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <span className="text-muted-foreground">+ Add Location</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* Premium Header Section */}
+      <SidebarHeader className="border-b border-border/30 px-4 py-4 gap-3">
+        {/* Premium Location Switcher */}
+        <PremiumLocationSwitcher />
 
+        {/* Collapse Button */}
+        <div className="pt-2">
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             className={cn(
-              "h-8 w-8 shrink-0 rounded-lg",
-              "hover:bg-sidebar-accent/60 active:scale-95",
-              "transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
+              "w-full h-9 rounded-lg gap-2",
+              "hover:bg-muted/60 transition-all duration-200"
             )}
             onClick={toggleSidebar}
             title={sidebarState === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
-            aria-label={sidebarState === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
           >
-            <PanelLeftClose className="size-4 rotate-180 transition-transform duration-300" strokeWidth={1.75} />
+            <PanelLeftClose className={cn(
+              "size-4 transition-transform duration-300",
+              sidebarState === 'collapsed' && "rotate-180"
+            )} />
+            <span className="text-xs font-medium">
+              {sidebarState === 'expanded' ? 'Collapse' : 'Expand'}
+            </span>
           </Button>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="gap-4 py-5 px-0">
-        {renderedGroups}
+      {/* Premium Navigation Content */}
+      <SidebarContent className="gap-6 py-6 px-3">
+        {navGroups.map((group) => {
+          const isExpanded = expandedGroups[group.label] !== false
+          const itemCount = group.items.length
+
+          return (
+            <div key={group.label} className="space-y-3">
+              {/* Group Header with Toggle */}
+              <div className="flex items-center justify-between px-3 group/header">
+                <div className="space-y-0.5">
+                  <h3 className={cn(
+                    "text-xs font-bold uppercase tracking-widest",
+                    "text-muted-foreground/70 transition-colors duration-200"
+                  )}>
+                    {group.label}
+                  </h3>
+                  <div className={cn(
+                    "h-0.5 bg-gradient-to-r from-primary/40 to-transparent",
+                    "transition-all duration-200",
+                    !isExpanded && "opacity-0"
+                  )} />
+                </div>
+
+                {/* Chevron Toggle */}
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className={cn(
+                    "p-1 rounded-md transition-all duration-200",
+                    "hover:bg-muted/60 opacity-0 group-hover/header:opacity-100"
+                  )}
+                  title={isExpanded ? 'Collapse section' : 'Expand section'}
+                >
+                  <ChevronRight 
+                    className={cn(
+                      "size-4 text-muted-foreground/60 transition-transform duration-300",
+                      isExpanded && "rotate-90"
+                    )} 
+                  />
+                </button>
+              </div>
+
+              {/* Navigation Items */}
+              {isExpanded && (
+                <div className="space-y-1 pl-2">
+                  {group.items.map((item) => {
+                    const isActive = pathname === item.href
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg",
+                          "transition-all duration-200 group/item relative",
+                          isActive
+                            ? "bg-primary/12 text-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                        )}
+                      >
+                        {/* Active Indicator - Left Bar */}
+                        {isActive && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-lg transition-all duration-200" />
+                        )}
+
+                        {/* Icon */}
+                        <item.icon className={cn(
+                          "size-5 shrink-0 transition-all duration-200",
+                          isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-foreground"
+                        )} />
+
+                        {/* Label */}
+                        <span className={cn(
+                          "flex-1 text-sm font-medium transition-all duration-200",
+                          isActive && "font-semibold"
+                        )}>
+                          {item.label}
+                        </span>
+
+                        {/* Badge */}
+                        {item.badge && (
+                          <div className="ml-auto">
+                            {item.badge === 'Live' ? (
+                              <PremiumLiveIndicator />
+                            ) : (
+                              <PremiumCountBadge count={item.badge} />
+                            )}
+                          </div>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/20 px-2 py-3 gap-3 bg-gradient-to-t from-sidebar/50 to-sidebar/0">
-        <SidebarMenu>
-          <NavItem 
-            item={{ label: 'Settings', href: '/settings', icon: Settings }}
-            isActive={pathname === '/settings'}
-          />
-        </SidebarMenu>
+      {/* Premium Footer Section */}
+      <SidebarFooter className="border-t border-border/30 px-4 py-4 gap-3">
+        {/* Settings Item */}
+        <Link
+          href="/settings"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg",
+            "transition-all duration-200 group/settings relative",
+            pathname === '/settings'
+              ? "bg-primary/12 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+          )}
+        >
+          {pathname === '/settings' && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-lg transition-all duration-200" />
+          )}
+          <Settings className={cn(
+            "size-5 shrink-0 transition-all duration-200",
+            pathname === '/settings' ? "text-primary" : "text-muted-foreground group-hover/settings:text-foreground"
+          )} />
+          <span className={cn(
+            "flex-1 text-sm font-medium transition-all duration-200",
+            pathname === '/settings' && "font-semibold"
+          )}>
+            Settings
+          </span>
+        </Link>
 
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger 
-                className={cn(
-                  "px-3 py-2.5 rounded-lg w-full flex items-center gap-2.5",
-                  "hover:bg-sidebar-accent/50 transition-all duration-200",
-                  "border border-sidebar-border/0 hover:border-sidebar-border/20",
-                  "cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50",
-                  "active:scale-[0.98] shadow-sm hover:shadow-md"
-                )}
-                aria-label="Open user menu"
-              >
-                <Avatar className="size-7 shrink-0 ring-2 ring-sidebar-border/30 group-hover:ring-primary/40 transition-all duration-200">
-                  <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
-                    RS
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col gap-0.5 leading-none min-w-0 text-left">
-                  <span className="font-semibold text-sm text-foreground truncate">Rajesh Sharma</span>
-                  <span className="text-xs text-muted-foreground/70">Owner</span>
-                </div>
-                <ChevronDown className="size-3.5 text-muted-foreground/40 ml-auto shrink-0 group-hover:text-muted-foreground/60 transition-colors duration-200" strokeWidth={1.75} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="start" side="top">
-                <DropdownMenuItem className="gap-2 focus:bg-sidebar-accent/60">
-                  <span className="flex-1">Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 focus:bg-sidebar-accent/60">
-                  <span className="flex-1">Account Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <SignOutMenuItem />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {/* User Profile Section */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full",
+              "transition-all duration-200 group/user",
+              "hover:bg-muted/40"
+            )}>
+              <Avatar className={cn(
+                "size-8 shrink-0 ring-2 ring-primary/20",
+                "group-hover/user:ring-primary/40 transition-all duration-200"
+              )}>
+                <AvatarFallback className="bg-primary/15 text-primary font-semibold text-xs">
+                  RS
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-0.5 leading-none min-w-0 text-left flex-1">
+                <span className="text-sm font-medium text-foreground">Rajesh Sharma</span>
+                <span className="text-xs text-muted-foreground">Owner</span>
+              </div>
+              <ChevronDown className="size-4 text-muted-foreground/50 shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="start" side="top">
+            <div className="px-2 py-1.5 text-sm">
+              <p className="font-medium text-foreground">Rajesh Sharma</p>
+              <p className="text-xs text-muted-foreground">owner@spicegarden.com</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="gap-2">
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2">
+              Account Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <SignOutMenuItem />
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   )
