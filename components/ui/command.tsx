@@ -48,21 +48,53 @@ function CommandDialog({
   children: React.ReactNode
 }) {
   return (
-    <Dialog {...props}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogContent
-        className={cn(
-          "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
-          className
-        )}
-        showCloseButton={showCloseButton}
-      >
-        {children}
-      </DialogContent>
-    </Dialog>
+    <>
+      <style>{`
+        @keyframes command-palette-in {
+          from {
+            opacity: 0;
+            transform: scale(0.96);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes command-palette-out {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.96);
+          }
+        }
+        [data-state="open"] [data-slot="dialog-content"] {
+          animation: command-palette-in 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        [data-state="closed"] [data-slot="dialog-content"] {
+          animation: command-palette-out 150ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
+        }
+      `}</style>
+      <Dialog {...props}>
+        <DialogHeader className="sr-only">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogContent
+          className={cn(
+            "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
+            className
+          )}
+          showCloseButton={showCloseButton}
+        >
+          <Command className="rounded-none border-none">
+            {children}
+          </Command>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -74,6 +106,7 @@ function CommandInput({
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
       <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
         <CommandPrimitive.Input
+          ref={props.ref as React.Ref<HTMLInputElement>}
           data-slot="command-input"
           className={cn(
             "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",

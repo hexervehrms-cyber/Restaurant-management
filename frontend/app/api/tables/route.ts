@@ -1,16 +1,15 @@
 /**
  * GET /api/tables?branchId=<id>
  * Get all tables for a branch
+ * NOTE: Prisma removed. Using Firebase/Firestore instead.
+ * TODO: Implement with Firestore RestaurantTableRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,25 +27,9 @@ export async function GET(request: NextRequest) {
     // Extract tenant context
     const tenantContext = extractTenantContext(authContext)
 
-    // Fetch all tables for the branch
-    const tables = await prisma.restaurantTable.findMany({
-      where: {
-        organizationId: tenantContext.organizationId,
-        branchId: branchId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        tableNumber: true,
-        capacity: true,
-        section: true,
-        status: true,
-      },
-      orderBy: [
-        { section: 'asc' },
-        { tableNumber: 'asc' },
-      ],
-    })
+    // TODO: Replace with Firestore RestaurantTableRepository
+    // Mock response: return empty tables array
+    const tables: any[] = []
 
     return NextResponse.json(successResponse(tables))
   } catch (error: any) {

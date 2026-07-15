@@ -2,16 +2,15 @@
  * GET /api/pos/tables?branchId=<id>
  * Get all tables for POS Terminal with current status and occupancy
  * Returns: id, tableNumber, capacity, section, status, currentOrderId, guestCount
+ * NOTE: Prisma removed. Using Firebase/Firestore instead.
+ * TODO: Implement with Firestore RestaurantTableRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,26 +23,9 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Fetch all tables for the branch with their current orders
-    const tables = await prisma.restaurantTable.findMany({
-      where: {
-        branchId: branchId,
-        organizationId: tenantContext.organizationId,
-        deletedAt: null,
-      },
-      orderBy: [
-        { section: 'asc' },
-        { tableNumber: 'asc' },
-      ],
-    })
-
-    const formatted = tables.map((table) => ({
-      id: table.id,
-      tableNumber: table.tableNumber,
-      capacity: table.capacity,
-      section: table.section,
-      status: table.status,
-    }))
+    // TODO: Replace with Firestore RestaurantTableRepository
+    // Mock response: empty tables array
+    const formatted: any[] = []
 
     return NextResponse.json(successResponse({
       data: formatted,

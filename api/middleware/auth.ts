@@ -3,7 +3,7 @@
  * TODO: Implement proper JWT authentication when auth service is ready
  */
 
-import { AuthenticationError } from '@/api/utils/errors'
+import { AuthenticationError, AuthorizationError } from '@/api/utils/errors'
 
 export interface AuthContext {
   userId: string
@@ -70,3 +70,31 @@ export const validateRole = (
     )
   }
 }
+
+/**
+ * Validate that user can modify restaurant status
+ * Only Restaurant Owner, Branch Manager, and Administrator can change status
+ * 
+ * Allowed Roles:
+ * - restaurant_owner
+ * - branch_manager
+ * - admin
+ */
+export const validateStatusUpdatePermission = (authContext: AuthContext): void => {
+  const allowedRoles = ['restaurant_owner', 'branch_manager', 'admin']
+  
+  if (!allowedRoles.includes(authContext.role)) {
+    throw new AuthorizationError(
+      `User role '${authContext.role}' does not have permission to change restaurant status. Only restaurant owners, branch managers, and administrators can modify operational status.`
+    )
+  }
+}
+
+/**
+ * Allowed roles that can VIEW restaurant status (read-only)
+ * All authenticated users can view
+ */
+export const canViewRestaurantStatus = (authContext: AuthContext): boolean => {
+  return !!authContext.userId
+}
+

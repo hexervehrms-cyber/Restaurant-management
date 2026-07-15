@@ -1,16 +1,15 @@
 /**
  * GET /api/crm/customers?branchId=<id>&tier=all&search=""
  * Get customers for a branch
+ * NOTE: Prisma removed. Using Firebase/Firestore instead.
+ * TODO: Implement with Firestore CustomerRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,42 +23,9 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    const where: any = {
-      restaurantId: tenantContext.restaurantId,
-      organizationId: tenantContext.organizationId,
-    }
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ]
-    }
-
-    const customers = await prisma.customer.findMany({
-      where,
-      include: {
-        loyaltyPoints: true,
-        addresses: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    })
-
-    const formatted = customers.map((customer) => ({
-      id: customer.id,
-      name: customer.name,
-      phone: customer.phone,
-      email: customer.email || '',
-      totalSpent: customer.totalSpent || 0,
-      visits: customer.visitCount || 0,
-      lastVisit: customer.lastVisitAt?.toISOString() || null,
-      tier: 'silver',
-      loyaltyPoints: customer.loyaltyPoints?.[0]?.availablePoints || 0,
-      preferences: customer.preferences || [],
-      notes: customer.notes || '',
-    }))
+    // TODO: Replace with Firestore CustomerRepository
+    // Mock response: empty customers array
+    const formatted: any[] = []
 
     return NextResponse.json(successResponse({
       data: formatted,

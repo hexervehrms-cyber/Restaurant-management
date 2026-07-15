@@ -339,3 +339,54 @@ export const getRevenueChartWeek = async (
     throw error
   }
 }
+
+
+/**
+ * Get dashboard header information
+ * Includes: user name, greeting, restaurant/branch info, business status
+ * 
+ * FLOW: Repositories load user/restaurant/settings → Build response
+ */
+export const getDashboardHeader = async (
+  userId: string,
+  restaurantId: string,
+  branchId: string,
+  organizationId: string,
+  userFirstName: string,
+  userLastName: string,
+  restaurantName: string,
+  branchName: string,
+  isOpen: boolean,
+  closingTime: string | null,
+  timezone: string
+) => {
+  // Calculate user greeting based on time of day
+  const now = new Date()
+  const hour = now.getHours()
+  let userGreeting = 'Good morning'
+  if (hour >= 12 && hour < 17) {
+    userGreeting = 'Good afternoon'
+  } else if (hour >= 17) {
+    userGreeting = 'Good evening'
+  }
+
+  const userName = `${userFirstName} ${userLastName}`.trim() || 'User'
+
+  // Format current time
+  const currentTime = now.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })
+
+  return {
+    userName,
+    userGreeting,
+    restaurantName,
+    branchName,
+    isOpen,
+    closingTime,
+    currentTime,
+    timezone,
+  }
+}

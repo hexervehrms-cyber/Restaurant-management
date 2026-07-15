@@ -22,13 +22,26 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
 
     // Fetch notifications for current user using Firestore
-    const notifications = await notificationRepository.findByUser(
-      authContext.userId,
-      authContext.organizationId,
-      {
-        limit,
+    // Note: If user/org don't exist, notifications query may fail with index error
+    // In development, we return empty array to prevent crashes
+    let notifications: any[] = []
+    try {
+      notifications = await notificationRepository.findByUser(
+        authContext.userId,
+        authContext.organizationId,
+        {
+          limit,
+        }
+      )
+    } catch (error: any) {
+      // Handle Firestore index errors gracefully
+      if (error.message?.includes('FAILED_PRECONDITION') || error.message?.includes('index')) {
+        console.warn('Firestore index not ready, returning empty notifications:', error.message)
+        notifications = []
+      } else {
+        throw error
       }
-    )
+    }
 
     // Format for response
     const formattedNotifications = notifications.map((notif) => ({

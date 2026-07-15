@@ -9,7 +9,7 @@ export { BaseRepository } from '../backend/src/repositories/BaseRepository'
 export { OrganizationRepository, type Organization, type CreateOrganizationPayload, type UpdateOrganizationPayload } from '../backend/src/repositories/OrganizationRepository'
 export { UserRepository, type User, type CreateUserPayload, type UpdateUserPayload } from '../backend/src/repositories/UserRepository'
 export { RoleRepository, type Role, type Permission, type CreateRolePayload, type UpdateRolePayload } from '../backend/src/repositories/RoleRepository'
-export { IRepository } from '../backend/src/repositories/IRepository'
+export type { IRepository } from '../backend/src/repositories/IRepository'
 export { RepositoryFactory } from '../backend/src/repositories/RepositoryFactory'
 
 /**
@@ -32,6 +32,31 @@ export { RefundRepository, type Refund, type CreateRefundPayload, type UpdateRef
  * Billing & Payments Services
  */
 export { BillingService } from '../backend/src/services/BillingService'
+
+/**
+ * Inventory Module Repositories & Services
+ */
+export { InventoryItemRepository, type InventoryItemDocument, type CreateInventoryItemPayload, type UpdateInventoryItemPayload } from '../backend/src/repositories/InventoryItemRepository'
+export { LowStockAlertRepository, type LowStockAlertDocument, type CreateLowStockAlertPayload, type UpdateLowStockAlertPayload } from '../backend/src/repositories/LowStockAlertRepository'
+export { StockMovementRepository, type StockMovementDocument, type CreateStockMovementPayload, type UpdateStockMovementPayload } from '../backend/src/repositories/StockMovementRepository'
+export { StockAdjustmentRepository, type StockAdjustmentDocument, type CreateStockAdjustmentPayload, type UpdateStockAdjustmentPayload } from '../backend/src/repositories/StockAdjustmentRepository'
+export { InventoryService } from '../backend/src/services/InventoryService'
+
+/**
+ * Orders & Restaurant Table Repositories
+ */
+export { OrderRepository, type OrderDocument, type CreateOrderPayload, type UpdateOrderPayload } from '../backend/src/repositories/OrderRepository'
+export { RestaurantTableRepository, type RestaurantTableDocument, type CreateRestaurantTablePayload, type UpdateRestaurantTablePayload } from '../backend/src/repositories/RestaurantTableRepository'
+
+/**
+ * Kitchen Module Services
+ */
+export { KitchenService } from '../backend/src/services/KitchenService'
+
+/**
+ * Reservation Module Services
+ */
+export { ReservationService } from '../backend/src/services/ReservationService'
 
 /**
  * Re-export commonly used types

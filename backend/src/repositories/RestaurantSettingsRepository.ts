@@ -15,6 +15,12 @@ import {
 } from '../types/firestore'
 
 /**
+ * Operational Status Type
+ * Represents the operational state of the restaurant
+ */
+export type OperationalStatus = 'OPEN' | 'CLOSED' | 'RUSH_HOUR'
+
+/**
  * Restaurant Settings Document Schema (Firestore)
  * Stores configuration for a specific restaurant
  * Inherits: id, organizationId, restaurantId from RestaurantScopedDocument
@@ -24,6 +30,11 @@ export interface RestaurantSettingsDocument extends RestaurantScopedDocument {
   operatingHours?: Record<string, any> | null
   timezone: string
   holidayList?: string[] | null
+
+  // Operational Status
+  operationalStatus?: OperationalStatus | null
+  operationalStatusOverride?: OperationalStatus | null
+  operationalStatusOverrideUntil?: Date | null
 
   // Tax & Charges
   defaultGstRate: number
@@ -231,5 +242,110 @@ export class RestaurantSettingsRepository extends BaseRepository<RestaurantSetti
       )
       return []
     }
+  }
+
+  /**
+   * Get operational status (including override)
+   * Returns the current operational status considering manual overrides
+   *
+   * @param restaurantId - Restaurant ID
+   * @returns Operational status or null
+   */
+  async getOperationalStatus(restaurantId: string): Promise<OperationalStatus | null> {
+    try {
+      const settings = await this.findByRestaurant(restaurantId)
+      if (!settings) {
+        return null
+      }
+
+      // Check if override is active
+      if (settings.operationalStatusOverride && settings.operationalStatusOverrideUntil) {
+        const now = new Date()
+        if (now < settings.operationalStatusOverrideUntil) {
+          return settings.operationalStatusOverride
+        }
+      }
+
+      return settings.operationalStatus || 'CLOSED'
+    } catch (error) {
+      console.error(`Error getting operational status for restaurant ${restaurantId}:`, error)
+      return 'CLOSED'
+    }
+  }
+
+  /**
+   * Update operational status
+   * Sets the restaurant's operational status (OPEN, CLOSED, RUSH_HOUR)
+   *
+   * @param restaurantId - Restaurant ID
+   * @param status - New operational status
+   * @param userId - User performing the update
+   * @returns Update result
+   */
+  async updateOperationalStatus(
+    restaurantId: string,
+    status: OperationalStatus,
+    userId: string
+  ): Promise<UpdateResult<RestaurantSettingsDocument>> {
+    return await this.update(
+      restaurantId,
+      {
+        operationalStatus: status,
+        operationalStatusOverride: null,
+        operationalStatusOverrideUntil: null,
+      } as any,
+      userId
+    )
+  }
+
+  /**
+   * Set temporary operational status override
+   * Temporarily override the status for a specified duration
+   *
+   * @param restaurantId - Restaurant ID
+   * @param status - Override status
+   * @param durationMinutes - How long the override lasts (in minutes)
+   * @param userId - User performing the update
+   * @returns Update result
+   */
+  async setOperationalStatusOverride(
+    restaurantId: string,
+    status: OperationalStatus,
+    durationMinutes: number,
+    userId: string
+  ): Promise<UpdateResult<RestaurantSettingsDocument>> {
+    const overrideUntil = new Date()
+    overrideUntil.setMinutes(overrideUntil.getMinutes() + durationMinutes)
+
+    return await this.update(
+      restaurantId,
+      {
+        operationalStatusOverride: status,
+        operationalStatusOverrideUntil: overrideUntil,
+      } as any,
+      userId
+    )
+  }
+
+  /**
+   * Clear operational status override
+   * Removes any active status override
+   *
+   * @param restaurantId - Restaurant ID
+   * @param userId - User performing the update
+   * @returns Update result
+   */
+  async clearOperationalStatusOverride(
+    restaurantId: string,
+    userId: string
+  ): Promise<UpdateResult<RestaurantSettingsDocument>> {
+    return await this.update(
+      restaurantId,
+      {
+        operationalStatusOverride: null,
+        operationalStatusOverrideUntil: null,
+      } as any,
+      userId
+    )
   }
 }

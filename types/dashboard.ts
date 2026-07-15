@@ -39,10 +39,34 @@ export interface SidebarCounts {
   kitchenLive: boolean
 }
 
+export type OperationalStatus = 'OPEN' | 'CLOSED' | 'RUSH_HOUR'
+
 export interface RestaurantStatus {
   isOpen: boolean
   statusLabel: string
   closingTime: string | null
+  timezone: string
+}
+
+export interface RestaurantOperationalStatus {
+  operationalStatus: OperationalStatus
+  isOpen: boolean
+  openingTime: string | null
+  closingTime: string | null
+  currentTime: string
+  timezone: string
+  hasManualOverride: boolean
+  overrideExpiresAt?: string | null
+}
+
+export interface DashboardHeader {
+  userName: string
+  userGreeting: string
+  restaurantName: string
+  branchName: string
+  isOpen: boolean
+  closingTime: string | null
+  currentTime: string
   timezone: string
 }
 

@@ -6,7 +6,6 @@
  * NO business logic - only generic Firestore operations
  */
 
-import * as admin from 'firebase-admin'
 import { getFirestore } from '../config/firebase'
 import { COLLECTIONS } from '../config/collections'
 import { BATCH_OPERATIONS } from '../config/constants'
@@ -37,7 +36,7 @@ import {
  * Provides common CRUD operations for all collections
  */
 export class BaseRepository<T extends BaseDocument> {
-  protected db: admin.firestore.Firestore
+  protected db: any
   protected collectionName: string
 
   constructor(collectionName: string) {
@@ -224,11 +223,11 @@ export class BaseRepository<T extends BaseDocument> {
     options?: QueryOptions,
     pagination?: {
       pageSize?: number
-      startAfter?: admin.firestore.DocumentSnapshot
+      startAfter?: any
     }
   ): Promise<{
     data: T[]
-    lastSnapshot?: admin.firestore.DocumentSnapshot
+    lastSnapshot?: any
     hasMore: boolean
   }> {
     try {
@@ -468,7 +467,7 @@ export class BaseRepository<T extends BaseDocument> {
    *     batch.update(docRef2, data2)
    *   })
    */
-  async batchWrite(operation: (batch: admin.firestore.WriteBatch) => void): Promise<BatchResult> {
+  async batchWrite(operation: (batch: any) => void): Promise<BatchResult> {
     try {
       const batch = this.db.batch()
       operation(batch)
@@ -504,7 +503,7 @@ export class BaseRepository<T extends BaseDocument> {
    *     transaction.update(docRef, updates)
    *   })
    */
-  async transaction<R>(operation: (transaction: admin.firestore.Transaction) => Promise<R>): Promise<R> {
+  async transaction<R>(operation: (transaction: any) => Promise<R>): Promise<R> {
     return this.db.runTransaction(operation)
   }
 

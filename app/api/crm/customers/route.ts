@@ -1,16 +1,14 @@
 /**
  * GET /api/crm/customers?branchId=<id>&tier=all&search=""
  * Get customers for a branch
+ * TODO: Implement with Firestore CustomerRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { CustomerRepository } from '@/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const customerRepo = new CustomerRepository()
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,37 +22,9 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Fetch customers using repository
-    let customers = await customerRepo.findByRestaurant(tenantContext.restaurantId)
-
-    // Filter by search if provided
-    if (search) {
-      customers = customers.filter((c) => {
-        const searchLower = search.toLowerCase()
-        return (
-          c.name?.toLowerCase().includes(searchLower) ||
-          c.phone?.includes(search) ||
-          c.email?.toLowerCase().includes(searchLower)
-        )
-      })
-    }
-
-    // Limit to 100 results
-    customers = customers.slice(0, 100)
-
-    const formatted = customers.map((customer) => ({
-      id: customer.id,
-      name: customer.name,
-      phone: customer.phone,
-      email: customer.email || '',
-      totalSpent: parseFloat(customer.totalSpent?.toString() || '0'),
-      visits: customer.visitCount || 0, // Note: visitCount may not be on CustomerDocument
-      lastVisit: customer.lastVisitAt ? new Date(customer.lastVisitAt).toISOString() : null,
-      tier: customer.tier || 'silver',
-      loyaltyPoints: 0,
-      preferences: [],
-      notes: customer.notes || '',
-    } as any))
+    // TODO: Replace with Firestore CustomerRepository
+    // Mock response: empty customers array
+    const formatted: any[] = []
 
     return NextResponse.json(successResponse({
       data: formatted,

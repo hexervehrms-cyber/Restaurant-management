@@ -7,111 +7,197 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, UtensilsCrossed, TableProperties, CalendarDays,
   ChefHat, ShoppingCart, BarChart3, Package, Users, Settings,
-  CreditCard, Zap, ChevronDown, Building2, ChevronRight, PanelLeftClose,
+  CreditCard, Zap, Building2, ChevronRight, ChevronLeft, ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
-  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
-  SidebarMenuItem, useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger, DropdownMenuSeparator,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/context/AuthContext'
 
+// Shared spacing constants
+const SIDEBAR_SPACING = {
+  contentPaddingX: 'px-1.5',
+  contentPaddingY: 'py-2',
+  itemPaddingX: 'px-2.5',
+  itemPaddingY: 'py-2.5',
+  itemHeight: 'h-9',
+  iconSize: 'size-5',
+  iconGap: 'gap-3',
+  collapsedSize: 'size-9',
+  collapsedPaddingX: 'px-2',
+  sectionGapTop: 'mt-6',
+  sectionGapBottom: 'mb-1',
+  itemGap: 'gap-1.5',
+}
+
 /**
- * Sign Out Menu Item
- * Handles logout and redirect to login page
+ * Counter Badge - Premium Circular Design
  */
-function SignOutMenuItem() {
+function CounterBadge({ count }: { count: string }) {
+  return (
+    <div className="inline-flex items-center justify-center rounded-full text-xs font-medium bg-muted/50 text-muted-foreground/80 transition-all duration-200 hover:bg-muted/70" style={{ width: '20px', height: '20px' }}>
+      {count}
+    </div>
+  )
+}
+
+/**
+ * User Profile Footer Component
+ * Premium account section with dropdown menu
+ */
+function UserProfileFooter() {
   const router = useRouter()
-  const { logout } = useAuth()
-  const [isLoading, setIsLoading] = React.useState(false)
+  const { logout, userProfile } = useAuth()
+  const { state: sidebarState } = useSidebar()
+  const isCollapsed = sidebarState === 'collapsed'
 
   const handleSignOut = async () => {
-    setIsLoading(true)
     try {
       await logout()
       router.push('/login')
     } catch (error) {
       console.error('Sign out failed:', error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  return (
-    <DropdownMenuItem 
-      onClick={handleSignOut}
-      disabled={isLoading}
-      className="text-destructive cursor-pointer"
-    >
-      {isLoading ? 'Signing out...' : 'Sign Out'}
-    </DropdownMenuItem>
-  )
-}
+  // Get user initials from first and last name
+  const getInitials = () => {
+    if (!userProfile) return 'U'
+    const firstName = userProfile.firstName?.charAt(0) || ''
+    const lastName = userProfile.lastName?.charAt(0) || ''
+    return (firstName + lastName).toUpperCase() || 'U'
+  }
 
-/**
- * Premium Location Switcher Component
- * Displays current restaurant/branch with branded styling and hover effects
- */
-function PremiumLocationSwitcher() {
-  return (
-    <div className="rounded-xl bg-gradient-to-br from-primary/8 via-primary/5 to-transparent border border-primary/15 p-3 space-y-2">
-      {/* Badge */}
-      <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-primary/10 w-fit">
-        <div className="size-2 rounded-full bg-primary" />
-        <span className="text-xs font-medium text-primary">Premium Account</span>
-      </div>
+  // Get display name
+  const getDisplayName = () => {
+    if (!userProfile) return 'User'
+    if (userProfile.firstName && userProfile.lastName) {
+      return `${userProfile.firstName} ${userProfile.lastName}`
+    }
+    return userProfile.firstName || userProfile.email?.split('@')[0] || 'User'
+  }
 
-      {/* Location Info */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Building2 className="size-4 text-primary/60" />
-          <span className="font-semibold text-sm text-foreground">Spice Garden</span>
+  // Format role display (e.g., "restaurant_owner" → "Owner")
+  const getFormattedRole = () => {
+    if (!userProfile?.role) return 'User'
+    const role = userProfile.role
+    // Handle snake_case or kebab-case
+    const formatted = role
+      .replace(/_/g, ' ')
+      .replace(/-/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+    return formatted
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "flex items-center justify-between gap-3",
+            SIDEBAR_SPACING.itemHeight,
+            SIDEBAR_SPACING.itemPaddingY,
+            "px-3",
+            "rounded-lg text-sm",
+            "transition-all duration-200",
+            "text-muted-foreground hover:text-foreground",
+            "hover:bg-muted/40",
+            "w-full",
+            "group/profile"
+          )}
+          title="Account menu"
+        >
+          {/* Avatar - Increased size */}
+          <div className={cn(
+            "flex items-center justify-center flex-none",
+            "rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 text-primary",
+            "text-xs font-semibold",
+            "transition-transform duration-200 group-hover/profile:scale-105"
+          )} style={{ width: '36px', height: '36px' }}>
+            {getInitials()}
+          </div>
+
+          {/* User Info - Hidden when collapsed */}
+          {!isCollapsed && (
+            <>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold text-foreground truncate leading-snug">
+                  {getDisplayName()}
+                </p>
+                <p className="text-xs text-muted-foreground/70 truncate leading-tight">
+                  {getFormattedRole()}
+                </p>
+              </div>
+
+              {/* Dropdown Chevron */}
+              <ChevronDown className="size-4 text-muted-foreground/40 shrink-0 transition-all duration-200 group-hover/profile:text-muted-foreground group-hover/profile:translate-y-0.5" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="start" side="top" className="w-56 mb-2">
+        {/* User Header in Dropdown */}
+        <div className="px-4 py-3 space-y-0.5">
+          <p className="text-sm font-semibold text-foreground">
+            {getDisplayName()}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {userProfile?.email || 'user@example.com'}
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground pl-6">Mumbai Central Branch</p>
-      </div>
-    </div>
+
+        <DropdownMenuSeparator />
+
+        {/* Menu Items */}
+        <DropdownMenuItem>
+          Switch Branch
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          Account Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          Preferences
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {/* Sign Out */}
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20 cursor-pointer"
+        >
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
-/**
- * Premium Live Indicator Component
- * Shows active status with animated pulse
- */
-function PremiumLiveIndicator() {
-  return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/10 border border-success/20">
-      <span className="size-2 rounded-full bg-success animate-pulse" />
-      <span className="text-xs font-medium text-success/80">Live</span>
-    </div>
-  )
-}
-
-/**
- * Premium Counter Badge Component
- * Shows count with subtle styling
- */
-function PremiumCountBadge({ count }: { count: string }) {
-  return (
-    <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-md text-xs font-semibold bg-muted text-foreground ring-1 ring-border/40">
-      {count}
-    </span>
-  )
-}
-
+// Navigation groups
 const navGroups = [
   {
-    label: 'Operations',
+    label: 'Restaurant',
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { label: 'POS Terminal', href: '/pos', icon: ShoppingCart, badge: 'Live' },
+      { label: 'POS Terminal', href: '/pos', icon: ShoppingCart },
       { label: 'Tables', href: '/tables', icon: TableProperties },
       { label: 'Reservations', href: '/reservations', icon: CalendarDays, badge: '3' },
       { label: 'Live Orders', href: '/orders', icon: Zap, badge: '5' },
@@ -120,7 +206,7 @@ const navGroups = [
   {
     label: 'Kitchen',
     items: [
-      { label: 'Kitchen Display', href: '/kitchen', icon: ChefHat, badge: 'Live' },
+      { label: 'Kitchen Display', href: '/kitchen', icon: ChefHat },
       { label: 'Menu Management', href: '/menu', icon: UtensilsCrossed },
       { label: 'Inventory', href: '/inventory', icon: Package, badge: '4' },
     ],
@@ -134,15 +220,23 @@ const navGroups = [
       { label: 'Staff', href: '/staff', icon: Users },
     ],
   },
+  {
+    label: 'Administration',
+    items: [
+      { label: 'Settings', href: '/settings', icon: Settings },
+    ],
+  },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { toggleSidebar, state: sidebarState } = useSidebar()
+  const isCollapsed = sidebarState === 'collapsed'
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    Operations: true,
+    Restaurant: true,
     Kitchen: true,
     Business: true,
+    Administration: true,
   })
 
   const toggleGroup = (label: string) => {
@@ -155,205 +249,195 @@ export function AppSidebar() {
   return (
     <Sidebar 
       collapsible="icon" 
-      className={cn(
-        "border-r border-border/40 bg-background",
-        "shadow-[inset_1px_0_0_0_rgba(255,255,255,0.05)]"
-      )}
+      className="border-r border-border/30 bg-background"
     >
-      {/* Premium Header Section */}
-      <SidebarHeader className="border-b border-border/30 px-4 py-4 gap-3">
-        {/* Premium Location Switcher */}
-        <PremiumLocationSwitcher />
+      {/* ─── WORKSPACE HEADER (Premium Identity Card) ─── */}
+      <SidebarHeader className="border-b border-border/20 px-2 py-4">
+        <button
+          onClick={toggleSidebar}
+          className={cn(
+            "flex items-center justify-between gap-3 px-3 py-3 rounded-lg",
+            "hover:bg-muted/30 transition-all duration-220",
+            "group text-left w-full",
+            "border border-transparent hover:border-border/10",
+            "hover:shadow-sm"
+          )}
+          title={isCollapsed ? 'Expand' : 'Collapse'}
+        >
+          {/* Restaurant Icon - Increased to 48px */}
+          <div className="flex items-center justify-center rounded-lg bg-gradient-to-br from-primary/25 to-primary/5 text-primary shrink-0 transition-all duration-220 group-hover:scale-110 group-hover:shadow-sm"
+            style={{ width: '48px', height: '48px' }}>
+            <Building2 className="size-5" />
+          </div>
 
-        {/* Collapse Button */}
-        <div className="pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full h-9 rounded-lg gap-2",
-              "hover:bg-muted/60 transition-all duration-200"
-            )}
-            onClick={toggleSidebar}
-            title={sidebarState === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            <PanelLeftClose className={cn(
-              "size-4 transition-transform duration-300",
-              sidebarState === 'collapsed' && "rotate-180"
-            )} />
-            <span className="text-xs font-medium">
-              {sidebarState === 'expanded' ? 'Collapse' : 'Expand'}
-            </span>
-          </Button>
-        </div>
+          {/* Restaurant Identity - Strong Typography */}
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-base text-foreground truncate leading-snug">
+                Spice Garden
+              </h2>
+              <p className="text-xs text-muted-foreground/60 truncate leading-tight mt-1">
+                Mumbai Central
+              </p>
+            </div>
+          )}
+
+          {/* Collapse Button - Centered Vertically */}
+          <div className={cn(
+            "flex shrink-0 text-muted-foreground/40 transition-all duration-220",
+            isCollapsed && "invisible"
+          )}>
+            <ChevronLeft className="size-4" />
+          </div>
+        </button>
       </SidebarHeader>
 
-      {/* Premium Navigation Content */}
-      <SidebarContent className="gap-6 py-6 px-3">
-        {navGroups.map((group) => {
-          const isExpanded = expandedGroups[group.label] !== false
-          const itemCount = group.items.length
+      {/* ─── NAVIGATION CONTENT (Premium Hierarchy) ─── */}
+      <SidebarContent className={cn(SIDEBAR_SPACING.contentPaddingX, SIDEBAR_SPACING.contentPaddingY, "gap-1")}>
+        <TooltipProvider delayDuration={300}>
+          {navGroups.map((group, groupIdx) => {
+            const isExpanded = expandedGroups[group.label] !== false
 
-          return (
-            <div key={group.label} className="space-y-3">
-              {/* Group Header with Toggle */}
-              <div className="flex items-center justify-between px-3 group/header">
-                <div className="space-y-0.5">
-                  <h3 className={cn(
-                    "text-xs font-bold uppercase tracking-widest",
-                    "text-muted-foreground/70 transition-colors duration-200"
-                  )}>
-                    {group.label}
-                  </h3>
+            return (
+              <div 
+                key={group.label}
+                className={cn(
+                  groupIdx > 0 && SIDEBAR_SPACING.sectionGapTop,
+                  "space-y-1"
+                )}
+              >
+                {/* ─── SECTION HEADER (Premium Typography) ─── */}
+                {!isCollapsed && (
                   <div className={cn(
-                    "h-0.5 bg-gradient-to-r from-primary/40 to-transparent",
-                    "transition-all duration-200",
-                    !isExpanded && "opacity-0"
-                  )} />
-                </div>
-
-                {/* Chevron Toggle */}
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  className={cn(
-                    "p-1 rounded-md transition-all duration-200",
-                    "hover:bg-muted/60 opacity-0 group-hover/header:opacity-100"
-                  )}
-                  title={isExpanded ? 'Collapse section' : 'Expand section'}
-                >
-                  <ChevronRight 
-                    className={cn(
-                      "size-4 text-muted-foreground/60 transition-transform duration-300",
-                      isExpanded && "rotate-90"
-                    )} 
-                  />
-                </button>
-              </div>
-
-              {/* Navigation Items */}
-              {isExpanded && (
-                <div className="space-y-1 pl-2">
-                  {group.items.map((item) => {
-                    const isActive = pathname === item.href
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
+                    "flex items-center justify-between",
+                    "px-3 py-2.5",
+                    "group/label"
+                  )}>
+                    <p className="text-xs font-medium text-muted-foreground/50 uppercase tracking-wider">
+                      {group.label}
+                    </p>
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className={cn(
+                        "opacity-0 group-hover/label:opacity-100",
+                        "transition-opacity duration-200",
+                        "p-1 rounded hover:bg-muted/40"
+                      )}
+                      title={isExpanded ? 'Collapse' : 'Expand'}
+                    >
+                      <ChevronRight 
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                          "transition-all duration-200 group/item relative",
-                          isActive
-                            ? "bg-primary/12 text-primary"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                        )}
-                      >
-                        {/* Active Indicator - Left Bar */}
-                        {isActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-lg transition-all duration-200" />
-                        )}
+                          "size-3.5 text-muted-foreground/30 transition-transform duration-200",
+                          isExpanded && "rotate-90"
+                        )} 
+                      />
+                    </button>
+                  </div>
+                )}
 
-                        {/* Icon */}
-                        <item.icon className={cn(
-                          "size-5 shrink-0 transition-all duration-200",
-                          isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-foreground"
-                        )} />
+                {/* ─── NAVIGATION ITEMS (Perfect Alignment) ─── */}
+                {isExpanded && (
+                  <div className={cn(
+                    isCollapsed && "flex flex-col items-center gap-1"
+                  )}>
+                    {group.items.map((item) => {
+                      const isActive = pathname === item.href
+                      const hasCount = item.badge && item.badge !== 'Live'
 
-                        {/* Label */}
-                        <span className={cn(
-                          "flex-1 text-sm font-medium transition-all duration-200",
-                          isActive && "font-semibold"
-                        )}>
-                          {item.label}
-                        </span>
-
-                        {/* Badge */}
-                        {item.badge && (
-                          <div className="ml-auto">
-                            {item.badge === 'Live' ? (
-                              <PremiumLiveIndicator />
-                            ) : (
-                              <PremiumCountBadge count={item.badge} />
-                            )}
+                      const navItemContent = (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          title={item.label}
+                          className={cn(
+                            // Base layout
+                            "flex items-center justify-start",
+                            SIDEBAR_SPACING.itemHeight,
+                            SIDEBAR_SPACING.itemPaddingY,
+                            "px-3",
+                            "rounded-lg text-sm",
+                            // Animation
+                            "transition-all duration-200",
+                            "group/nav",
+                            // Collapsed state - Fixed centering
+                            isCollapsed && cn(
+                              "justify-center",
+                              SIDEBAR_SPACING.collapsedSize,
+                              "px-0 py-0 mx-auto",
+                              "relative"
+                            ),
+                            // Active state - Premium lightweight design
+                            isActive
+                              ? cn(
+                                "bg-blue-500/8 text-primary font-semibold",
+                                "border-l-3 border-primary pl-2",
+                                isCollapsed && "border-l-0 pl-0 bg-primary/10"
+                              )
+                              : cn(
+                                "text-muted-foreground hover:text-foreground",
+                                "hover:bg-muted/40",
+                                "border-l-3 border-transparent pl-2",
+                                isCollapsed && "border-l-0 pl-0"
+                              )
+                          )}
+                        >
+                          {/* Icon - Perfect sizing and centering */}
+                          <div className="flex items-center justify-center flex-none">
+                            <item.icon className={cn(
+                              SIDEBAR_SPACING.iconSize,
+                              "transition-all duration-200",
+                              isActive ? "text-primary" : "text-muted-foreground group-hover/nav:text-foreground"
+                            )} />
                           </div>
-                        )}
-                      </Link>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
+
+                          {/* Label - Hidden when collapsed */}
+                          {!isCollapsed && (
+                            <>
+                              <span className="flex-1 min-w-0 truncate ml-3">
+                                {item.label}
+                              </span>
+
+                              {/* Badge - Right aligned */}
+                              {hasCount && (
+                                <div className="ml-2 shrink-0 flex items-center">
+                                  <CounterBadge count={item.badge || ''} />
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </Link>
+                      )
+
+                      // Tooltip when collapsed
+                      if (isCollapsed) {
+                        return (
+                          <Tooltip key={item.href}>
+                            <TooltipTrigger asChild>
+                              {navItemContent}
+                            </TooltipTrigger>
+                            <TooltipContent 
+                              side="right" 
+                              className="bg-foreground/90 text-background text-xs font-medium px-2 py-1"
+                            >
+                              {item.label}
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      }
+
+                      return navItemContent
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </TooltipProvider>
       </SidebarContent>
 
-      {/* Premium Footer Section */}
-      <SidebarFooter className="border-t border-border/30 px-4 py-4 gap-3">
-        {/* Settings Item */}
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg",
-            "transition-all duration-200 group/settings relative",
-            pathname === '/settings'
-              ? "bg-primary/12 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-          )}
-        >
-          {pathname === '/settings' && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-lg transition-all duration-200" />
-          )}
-          <Settings className={cn(
-            "size-5 shrink-0 transition-all duration-200",
-            pathname === '/settings' ? "text-primary" : "text-muted-foreground group-hover/settings:text-foreground"
-          )} />
-          <span className={cn(
-            "flex-1 text-sm font-medium transition-all duration-200",
-            pathname === '/settings' && "font-semibold"
-          )}>
-            Settings
-          </span>
-        </Link>
-
-        {/* User Profile Section */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full",
-              "transition-all duration-200 group/user",
-              "hover:bg-muted/40"
-            )}>
-              <Avatar className={cn(
-                "size-8 shrink-0 ring-2 ring-primary/20",
-                "group-hover/user:ring-primary/40 transition-all duration-200"
-              )}>
-                <AvatarFallback className="bg-primary/15 text-primary font-semibold text-xs">
-                  RS
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col gap-0.5 leading-none min-w-0 text-left flex-1">
-                <span className="text-sm font-medium text-foreground">Rajesh Sharma</span>
-                <span className="text-xs text-muted-foreground">Owner</span>
-              </div>
-              <ChevronDown className="size-4 text-muted-foreground/50 shrink-0" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="start" side="top">
-            <div className="px-2 py-1.5 text-sm">
-              <p className="font-medium text-foreground">Rajesh Sharma</p>
-              <p className="text-xs text-muted-foreground">owner@spicegarden.com</p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2">
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2">
-              Account Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <SignOutMenuItem />
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* ─── USER PROFILE FOOTER (Premium Account Section) ─── */}
+      <SidebarFooter className="border-t border-border/20 px-2 py-3">
+        <UserProfileFooter />
       </SidebarFooter>
     </Sidebar>
   )

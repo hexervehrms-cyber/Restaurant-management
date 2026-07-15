@@ -10,12 +10,13 @@ import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-import { InventoryService } from '@/repositories'
-
-const inventoryService = new InventoryService()
 
 export async function GET(request: NextRequest) {
   try {
+    // Import service only when route is called, not at module load time
+    const { InventoryService } = await import('@/repositories')
+    const inventoryService = new InventoryService()
+
     const branchId = request.nextUrl.searchParams.get('branchId')
     const search = request.nextUrl.searchParams.get('search') || ''
     const lowStock = request.nextUrl.searchParams.get('lowStock') === 'true'
