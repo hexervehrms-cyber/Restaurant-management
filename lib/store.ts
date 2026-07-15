@@ -1,6 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { OrderItem, PaymentMethod } from './mock-data'
 
 // ── UI Store ──────────────────────────────────────────────────────────────
@@ -10,22 +11,37 @@ interface UIStore {
   commandOpen: boolean
   activeModule: string
   theme: 'dark' | 'light' | 'system'
+  restaurantStatus: 'open' | 'busy' | 'closed'
   setSidebarCollapsed: (v: boolean) => void
   setCommandOpen: (v: boolean) => void
   setActiveModule: (v: string) => void
   setTheme: (v: 'dark' | 'light' | 'system') => void
+  setRestaurantStatus: (v: 'open' | 'busy' | 'closed') => void
 }
 
-export const useUIStore = create<UIStore>((set) => ({
-  sidebarCollapsed: false,
-  commandOpen: false,
-  activeModule: 'dashboard',
-  theme: 'dark',
-  setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
-  setCommandOpen: (v) => set({ commandOpen: v }),
-  setActiveModule: (v) => set({ activeModule: v }),
-  setTheme: (v) => set({ theme: v }),
-}))
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set) => ({
+      sidebarCollapsed: false,
+      commandOpen: false,
+      activeModule: 'dashboard',
+      theme: 'dark',
+      restaurantStatus: 'open',
+      setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
+      setCommandOpen: (v) => set({ commandOpen: v }),
+      setActiveModule: (v) => set({ activeModule: v }),
+      setTheme: (v) => set({ theme: v }),
+      setRestaurantStatus: (v) => set({ restaurantStatus: v }),
+    }),
+    {
+      name: 'ui-store',
+      partialize: (state) => ({
+        theme: state.theme,
+        restaurantStatus: state.restaurantStatus,
+      }),
+    }
+  )
+)
 
 // ── POS Cart Store ────────────────────────────────────────────────────────
 

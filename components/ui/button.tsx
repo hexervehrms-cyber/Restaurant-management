@@ -1,6 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
-import { forwardRef, ReactNode, cloneElement, isValidElement } from "react"
+import { forwardRef, ReactNode, isValidElement, cloneElement } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -51,6 +51,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const buttonClassName = cn(buttonVariants({ variant, size, className }))
 
     // When asChild is true, clone the child and apply button styles
+    // This is how we properly implement asChild without passing it to ButtonPrimitive
     if (asChild && isValidElement(children)) {
       return cloneElement(children, {
         className: cn(buttonClassName, (children as any).props?.className),
@@ -58,7 +59,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       } as any)
     }
 
-    // Normal button rendering
+    // Normal button rendering - do NOT pass asChild to ButtonPrimitive
+    // ButtonPrimitive doesn't support it and will spread it to the DOM
     return (
       <ButtonPrimitive
         ref={ref}

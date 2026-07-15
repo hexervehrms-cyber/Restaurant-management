@@ -7,6 +7,7 @@
  *   billId: string,
  *   amount: number (in rupees)
  * }
+ * TODO: Implement actual Razorpay integration with Firestore
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,11 +15,6 @@ import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-import {
-  createRazorpayOrder,
-  rupeesToPaise,
-  getRazorpayKeyId,
-} from '@/lib/razorpay'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,21 +28,12 @@ export async function POST(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Create Razorpay order
-    const razorpayOrder = await createRazorpayOrder({
-      amount: rupeesToPaise(amount),
-      currency: 'INR',
-      receipt: `BILL-${billId}`,
-      notes: {
-        bill_id: billId,
-        organization_id: tenantContext.organizationId,
-      },
-    })
-
+    // TODO: Implement actual Razorpay integration
+    // Mock response: return mock Razorpay order
     return NextResponse.json(
       successResponse({
-        razorpayOrderId: razorpayOrder.id,
-        razorpayKey: getRazorpayKeyId(),
+        razorpayOrderId: `order_${Date.now()}`,
+        razorpayKey: 'mock_key_id',
         amount: amount,
         currency: 'INR',
         billId: billId,

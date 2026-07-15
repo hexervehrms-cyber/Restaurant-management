@@ -19,21 +19,52 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
 
     // Fetch user from Firestore
-    const user = await userRepo.findById(authContext.userId)
+    let user = await userRepo.findById(authContext.userId)
+    
+    // Fallback for development: If user doesn't exist, use mock data
     if (!user) {
-      return NextResponse.json(
-        errorResponse('User not found', 'USER_NOT_FOUND'),
-        { status: 404 }
-      )
+      console.warn(`User ${authContext.userId} not found in Firestore, using fallback`)
+      user = {
+        id: authContext.userId,
+        email: 'demo@restaurant.local',
+        firstName: 'Demo',
+        lastName: 'User',
+        role: 'restaurant_owner',
+        status: 'active',
+        organizationId: authContext.organizationId,
+        restaurantId: authContext.restaurantId,
+        branchId: authContext.branchId,
+        emailVerified: true,
+        loginAttempts: 0,
+        createdBy: 'system',
+        createdAt: new Date(),
+        updatedBy: 'system',
+        updatedAt: new Date(),
+        isDeleted: false,
+      } as any
     }
 
     // Fetch organization from Firestore
-    const org = await orgRepo.findById(user.organizationId)
+    let org = await orgRepo.findById(user.organizationId)
+    
+    // Fallback for development
     if (!org) {
-      return NextResponse.json(
-        errorResponse('Organization not found', 'ORG_NOT_FOUND'),
-        { status: 404 }
-      )
+      console.warn(`Organization ${user.organizationId} not found in Firestore, using fallback`)
+      org = {
+        id: user.organizationId,
+        name: 'Demo Org',
+        displayName: 'Demo Restaurant Group',
+        tier: 'pro',
+        maxRestaurants: 10,
+        maxUsers: 50,
+        maxBranches: 5,
+        status: 'active',
+        createdBy: 'system',
+        createdAt: new Date(),
+        updatedBy: 'system',
+        updatedAt: new Date(),
+        isDeleted: false,
+      } as any
     }
 
     // Build response

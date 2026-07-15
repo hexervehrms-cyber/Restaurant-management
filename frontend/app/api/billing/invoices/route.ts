@@ -1,16 +1,15 @@
 /**
  * GET /api/billing/invoices?branchId=<id>&date=&status=all
  * Get invoices/bills for a branch
+ * NOTE: Prisma removed. Using Firebase/Firestore instead.
+ * TODO: Implement with Firestore BillingService
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,59 +24,9 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    const where: any = {
-      branchId,
-      restaurantId: tenantContext.restaurantId,
-      organizationId: tenantContext.organizationId,
-    }
-
-    if (date) {
-      const dateObj = new Date(date)
-      const nextDate = new Date(dateObj)
-      nextDate.setDate(nextDate.getDate() + 1)
-      
-      where.createdAt = {
-        gte: dateObj,
-        lt: nextDate,
-      }
-    }
-
-    if (status !== 'all') {
-      where.paymentStatus = status
-    }
-
-    const bills = await prisma.bill.findMany({
-      where,
-      include: {
-        order: {
-          include: {
-            diningTable: true,
-          },
-        },
-        items: true,
-        payments: true,
-        customer: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    })
-
-    const formatted = bills.map((bill) => ({
-      id: bill.id,
-      orderId: bill.orderId,
-      customerId: bill.customerId,
-      customer: bill.customer?.name || 'Walk-in',
-      tableNumber: bill.order?.diningTable?.number || 0,
-      items: bill.items?.length || 0,
-      amount: bill.totalAmount,
-      tax: bill.totalTax,
-      discount: bill.discount || 0,
-      total: bill.grandTotal,
-      date: bill.createdAt.toISOString().split('T')[0],
-      status: bill.paymentStatus.toLowerCase(),
-      paymentMethod: bill.paymentMethod || 'pending',
-      createdAt: bill.createdAt.toISOString(),
-    }))
+    // TODO: Replace with Firestore BillingService
+    // Mock response: empty invoices array
+    const formatted: any[] = []
 
     return NextResponse.json(successResponse({
       data: formatted,

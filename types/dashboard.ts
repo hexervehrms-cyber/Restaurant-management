@@ -46,6 +46,17 @@ export interface RestaurantStatus {
   timezone: string
 }
 
+export interface DashboardHeader {
+  userName: string
+  userGreeting: string
+  restaurantName: string
+  branchName: string
+  isOpen: boolean
+  closingTime: string | null
+  currentTime: string
+  timezone: string
+}
+
 export interface TopDish {
   id: string
   name: string

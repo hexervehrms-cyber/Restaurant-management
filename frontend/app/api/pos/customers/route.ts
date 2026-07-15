@@ -3,16 +3,15 @@
  * Create a quick customer from POS
  * Required: phone
  * Optional: firstName, lastName, email
+ * NOTE: Prisma removed. Using Firebase/Firestore instead.
+ * TODO: Implement with Firestore CustomerRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,44 +25,18 @@ export async function POST(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Check if customer already exists with this phone
-    const existingCustomer = await prisma.customer.findFirst({
-      where: {
-        organizationId: tenantContext.organizationId,
-        phone: phone,
-        deletedAt: null,
-      },
-    })
-
-    if (existingCustomer) {
-      return NextResponse.json(successResponse({
-        id: existingCustomer.id,
-        phone: existingCustomer.phone,
-        firstName: existingCustomer.firstName,
-        lastName: existingCustomer.lastName,
-        email: existingCustomer.email,
-      }))
+    // TODO: Replace with Firestore CustomerRepository
+    // Mock response: return new customer
+    const newCustomer = {
+      id: `customer_${Date.now()}`,
+      phone: phone,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      email: email || '',
     }
 
-    // Create new customer
-    const newCustomer = await prisma.customer.create({
-      data: {
-        organizationId: tenantContext.organizationId,
-        phone: phone,
-        firstName: firstName || null,
-        lastName: lastName || null,
-        email: email || null,
-      },
-    })
-
     return NextResponse.json(
-      successResponse({
-        id: newCustomer.id,
-        phone: newCustomer.phone,
-        firstName: newCustomer.firstName,
-        lastName: newCustomer.lastName,
-        email: newCustomer.email,
-      }),
+      successResponse(newCustomer),
       { status: 201 }
     )
   } catch (error: any) {

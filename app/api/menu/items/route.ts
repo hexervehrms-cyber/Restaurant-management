@@ -4,15 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-// Import repositories lazily to avoid circular dependencies
-// Frontend fetches data from backend API, then formats it
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {

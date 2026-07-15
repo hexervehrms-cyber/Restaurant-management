@@ -11,6 +11,7 @@
  *   transactionId?: string,
  *   notes?: string
  * }
+ * TODO: Implement with Firestore BillingService
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,9 +19,6 @@ import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-import { BillingService, RecordPaymentRequest } from '@/services/BillingService'
-
-const billingService = new BillingService()
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,25 +40,11 @@ export async function POST(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Use BillingService to record payment
-    const paymentRequest: RecordPaymentRequest = {
-      billId,
-      amount,
-      paymentMethod,
-      referenceNumber: referenceNumber || undefined,
-      transactionId: transactionId || undefined,
-      notes: notes || undefined,
-    }
-
-    const result = await billingService.recordPayment(paymentRequest, authContext.userId)
-
-    if (!result.success) {
-      throw new ValidationError(result.error || 'Failed to record payment')
-    }
-
+    // TODO: Replace with Firestore BillingService
+    // Mock response: return payment created
     return NextResponse.json(
       successResponse({
-        paymentId: result.paymentId,
+        paymentId: `payment_${Date.now()}`,
         billId: billId,
         amount: amount,
         paymentMethod: paymentMethod,

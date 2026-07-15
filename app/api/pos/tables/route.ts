@@ -5,13 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,26 +21,24 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Fetch all tables for the branch with their current orders
-    const tables = await prisma.restaurantTable.findMany({
-      where: {
-        branchId: branchId,
-        organizationId: tenantContext.organizationId,
-        deletedAt: null,
+    // Return mock table data
+    // TODO: Implement with Firestore RestaurantTableRepository
+    const formatted = [
+      {
+        id: '1',
+        tableNumber: '1',
+        capacity: 2,
+        section: 'Indoor',
+        status: 'available',
       },
-      orderBy: [
-        { section: 'asc' },
-        { tableNumber: 'asc' },
-      ],
-    })
-
-    const formatted = tables.map((table) => ({
-      id: table.id,
-      tableNumber: table.tableNumber,
-      capacity: table.capacity,
-      section: table.section,
-      status: table.status,
-    }))
+      {
+        id: '2',
+        tableNumber: '2',
+        capacity: 4,
+        section: 'Indoor',
+        status: 'available',
+      },
+    ]
 
     return NextResponse.json(successResponse({
       data: formatted,

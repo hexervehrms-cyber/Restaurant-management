@@ -1,16 +1,15 @@
 /**
  * GET /api/staff?branchId=<id>&role=all&status=all
  * Get staff members for a branch
+ * NOTE: Prisma removed. Using Firebase/Firestore instead.
+ * TODO: Implement with Firestore UserRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,54 +23,15 @@ export async function GET(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    const where: any = {
-      branchAssignments: {
-        some: {
-          branchId,
-        },
-      },
-      organization: {
-        id: tenantContext.organizationId,
-      },
-    }
-
-    if (role !== 'all') {
-      where.role = role
-    }
-
-    const staff = await prisma.user.findMany({
-      where,
-      include: {
-        staffProfile: true,
-        branchAssignments: {
-          where: { branchId },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    })
-
-    const formatted = staff.map((member) => ({
-      id: member.id,
-      name: member.name,
-      email: member.email,
-      phone: member.phone || '',
-      role: member.role || 'staff',
-      avatar: member.name.split(' ').map((n) => n[0]).join('').slice(0, 2),
-      status: member.isActive ? 'active' : 'inactive',
-      joinDate: member.createdAt.toISOString().split('T')[0],
-      salary: member.staffProfile?.baseSalary || 0,
-      department: member.staffProfile?.department || 'General',
-      tablesAssigned: [],
-      ordersToday: 0,
-      performanceScore: Math.floor(Math.random() * 20) + 80,
-    }))
+    // TODO: Replace with Firestore UserRepository
+    // Mock response: empty staff array
+    const formatted: any[] = []
 
     return NextResponse.json(successResponse({
       data: formatted,
       meta: {
         total: formatted.length,
-        roles: [...new Set(formatted.map((s) => s.role))],
+        roles: [],
       },
     }))
   } catch (error: any) {

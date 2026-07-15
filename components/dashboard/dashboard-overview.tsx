@@ -24,27 +24,7 @@ export function DashboardOverview() {
   const occupancyPct = Math.round((occupiedTables / totalTables) * 100)
 
   return (
-    <main className="flex flex-col gap-6 p-6">
-      {/* ── Greeting bar ─────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Good evening, Rajesh</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Today is going well — revenue is up 18.4% vs yesterday
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1.5 text-success border-success/30 bg-success/5">
-            <span className="size-1.5 rounded-full bg-success animate-pulse" />
-            Restaurant Open
-          </Badge>
-          <Button size="sm" variant="outline">
-            <Clock className="size-3.5" />
-            <span>Close at 11 PM</span>
-          </Button>
-        </div>
-      </div>
-
+    <>
       {/* ── KPI Stats ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <StatCard
@@ -201,6 +181,6 @@ export function DashboardOverview() {
           </Card>
         </div>
       </div>
-    </main>
+    </>
   )
 }

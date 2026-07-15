@@ -1,9 +1,12 @@
 /**
  * Firestore Timestamp Helpers
  * Centralized timestamp utilities for consistent date handling
+ * 
+ * IMPORTANT: Uses modular Firebase Admin SDK
+ * firebase-admin/firestore provides Timestamp class and serverTimestamp()
  */
 
-import * as admin from 'firebase-admin'
+import { serverTimestamp as firestoreServerTimestamp } from 'firebase-admin/firestore'
 
 /**
  * Get current server timestamp
@@ -12,19 +15,19 @@ import * as admin from 'firebase-admin'
  * Usage:
  *   createdAt: serverTimestamp()
  */
-export function serverTimestamp(): admin.firestore.FieldValue {
-  return admin.firestore.FieldValue.serverTimestamp()
+export function serverTimestamp(): any {
+  return firestoreServerTimestamp()
 }
 
 /**
  * Create a new timestamp (current time)
- * For server-side operations
+ * Returns a Date object - Firestore converts it to Timestamp on write
  * 
  * Usage:
  *   const now = createTimestamp()
  */
-export function createTimestamp(): admin.firestore.Timestamp {
-  return admin.firestore.Timestamp.now()
+export function createTimestamp(): Date {
+  return new Date()
 }
 
 /**
@@ -34,8 +37,8 @@ export function createTimestamp(): admin.firestore.Timestamp {
  * Usage:
  *   update({ updatedAt: updateTimestamp() })
  */
-export function updateTimestamp(): admin.firestore.FieldValue {
-  return admin.firestore.FieldValue.serverTimestamp()
+export function updateTimestamp(): any {
+  return firestoreServerTimestamp()
 }
 
 /**
@@ -44,24 +47,31 @@ export function updateTimestamp(): admin.firestore.FieldValue {
  * Usage:
  *   const ts = dateToTimestamp(new Date())
  */
-export function dateToTimestamp(date: Date): admin.firestore.Timestamp {
-  return admin.firestore.Timestamp.fromDate(date)
+export function dateToTimestamp(date: Date): Date {
+  return date
 }
 
 /**
  * Convert Firestore Timestamp to Date
+ * Works with both modular API Timestamps and Date objects
  * 
  * Usage:
  *   const date = timestampToDate(doc.createdAt)
  */
 export function timestampToDate(timestamp: any): Date {
   if (!timestamp) return null as any
-  if (timestamp instanceof admin.firestore.Timestamp) {
-    return timestamp.toDate()
-  }
+  
+  // Already a Date object
   if (timestamp instanceof Date) {
     return timestamp
   }
+  
+  // Firestore Timestamp (modular API) - check for methods
+  if (typeof timestamp?.toDate === 'function') {
+    return timestamp.toDate()
+  }
+  
+  // Fallback
   return null as any
 }
 
@@ -71,8 +81,8 @@ export function timestampToDate(timestamp: any): Date {
  * Usage:
  *   const ts = fromSeconds(1689270645)
  */
-export function fromSeconds(seconds: number): admin.firestore.Timestamp {
-  return admin.firestore.Timestamp.fromMillis(seconds * 1000)
+export function fromSeconds(seconds: number): Date {
+  return new Date(seconds * 1000)
 }
 
 /**
@@ -83,14 +93,19 @@ export function fromSeconds(seconds: number): admin.firestore.Timestamp {
  */
 export function toMillis(timestamp: any): number {
   if (!timestamp) return 0
-  if (timestamp instanceof admin.firestore.Timestamp) {
-    return timestamp.toMillis()
-  }
+  
   if (timestamp instanceof Date) {
     return timestamp.getTime()
   }
+  
+  // Firestore Timestamp with toMillis method
+  if (typeof timestamp?.toMillis === 'function') {
+    return timestamp.toMillis()
+  }
+  
   return 0
 }
+
 
 /**
  * Format timestamp for display
@@ -196,10 +211,9 @@ export function isToday(timestamp: any): boolean {
  * Usage:
  *   const start = getStartOfDay()
  */
-export function getStartOfDay(date?: Date): admin.firestore.Timestamp {
+export function getStartOfDay(date?: Date): Date {
   const d = date || new Date()
-  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
-  return dateToTimestamp(start)
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
 }
 
 /**
@@ -208,10 +222,9 @@ export function getStartOfDay(date?: Date): admin.firestore.Timestamp {
  * Usage:
  *   const end = getEndOfDay()
  */
-export function getEndOfDay(date?: Date): admin.firestore.Timestamp {
+export function getEndOfDay(date?: Date): Date {
   const d = date || new Date()
-  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
-  return dateToTimestamp(end)
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 }
 
 /**
@@ -220,10 +233,9 @@ export function getEndOfDay(date?: Date): admin.firestore.Timestamp {
  * Usage:
  *   const start = getStartOfMonth()
  */
-export function getStartOfMonth(date?: Date): admin.firestore.Timestamp {
+export function getStartOfMonth(date?: Date): Date {
   const d = date || new Date()
-  const start = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0)
-  return dateToTimestamp(start)
+  return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0)
 }
 
 /**
@@ -232,8 +244,7 @@ export function getStartOfMonth(date?: Date): admin.firestore.Timestamp {
  * Usage:
  *   const end = getEndOfMonth()
  */
-export function getEndOfMonth(date?: Date): admin.firestore.Timestamp {
+export function getEndOfMonth(date?: Date): Date {
   const d = date || new Date()
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
-  return dateToTimestamp(end)
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
 }

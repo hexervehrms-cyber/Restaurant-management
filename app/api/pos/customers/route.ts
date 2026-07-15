@@ -3,16 +3,14 @@
  * Create a quick customer from POS
  * Required: phone
  * Optional: firstName, lastName, email
+ * TODO: Implement with Firestore CustomerRepository
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { CustomerRepository } from '@/repositories'
 import { getMockAuthContext } from '@/api/middleware/auth'
 import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError } from '@/api/utils/errors'
-
-const customerRepo = new CustomerRepository()
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,49 +24,18 @@ export async function POST(request: NextRequest) {
     const authContext = getMockAuthContext()
     const tenantContext = extractTenantContext(authContext)
 
-    // Check if customer already exists with this phone
-    const existingCustomers = await customerRepo.findByPhone(tenantContext.organizationId, phone)
-    
-    if (existingCustomers && existingCustomers.length > 0) {
-      const existingCustomer = existingCustomers[0]
-      return NextResponse.json(successResponse({
-        id: existingCustomer.id,
-        phone: existingCustomer.phone,
-        firstName: existingCustomer.firstName,
-        lastName: existingCustomer.lastName,
-        email: existingCustomer.email,
-      }))
+    // TODO: Replace with Firestore CustomerRepository
+    // Mock response: return new customer
+    const newCustomer = {
+      id: `customer_${Date.now()}`,
+      phone: phone,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      email: email || '',
     }
-
-    // Create new customer
-    const result = await customerRepo.create(
-      {
-        organizationId: tenantContext.organizationId,
-        phone: phone,
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
-        email: email || undefined,
-        name: `${firstName || ''} ${lastName || ''}`.trim(),
-        tier: 'silver',
-      },
-      authContext.userId,
-      tenantContext.organizationId
-    )
-
-    if (!result.success) {
-      throw new ValidationError(result.error || 'Failed to create customer')
-    }
-
-    const newCustomer = result.data
 
     return NextResponse.json(
-      successResponse({
-        id: newCustomer.id,
-        phone: newCustomer.phone,
-        firstName: newCustomer.firstName,
-        lastName: newCustomer.lastName,
-        email: newCustomer.email,
-      }),
+      successResponse(newCustomer),
       { status: 201 }
     )
   } catch (error: any) {

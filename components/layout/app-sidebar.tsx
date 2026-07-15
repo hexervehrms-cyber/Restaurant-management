@@ -161,9 +161,18 @@ export function AppSidebar() {
       )}
     >
       {/* Premium Header Section */}
-      <SidebarHeader className="border-b border-border/30 px-4 py-4 gap-3">
-        {/* Premium Location Switcher */}
-        <PremiumLocationSwitcher />
+      <SidebarHeader className={cn(
+        "border-b border-border/30 px-4 py-4 gap-3",
+        "transition-all duration-300",
+        "group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3"
+      )}>
+        {/* Premium Location Switcher - Hidden when collapsed */}
+        <div className={cn(
+          "transition-all duration-300 overflow-hidden",
+          "group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0"
+        )}>
+          <PremiumLocationSwitcher />
+        </div>
 
         {/* Collapse Button */}
         <div className="pt-2">
@@ -171,17 +180,21 @@ export function AppSidebar() {
             variant="ghost"
             size="sm"
             className={cn(
-              "w-full h-9 rounded-lg gap-2",
-              "hover:bg-muted/60 transition-all duration-200"
+              "w-full h-9 rounded-lg gap-2 justify-center",
+              "hover:bg-muted/60 transition-all duration-200",
+              "group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:p-0"
             )}
             onClick={toggleSidebar}
             title={sidebarState === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
           >
             <PanelLeftClose className={cn(
-              "size-4 transition-transform duration-300",
+              "size-4 transition-transform duration-300 flex-shrink-0",
               sidebarState === 'collapsed' && "rotate-180"
             )} />
-            <span className="text-xs font-medium">
+            <span className={cn(
+              "text-xs font-medium transition-all duration-300 overflow-hidden",
+              "group-data-[collapsible=icon]:hidden"
+            )}>
               {sidebarState === 'expanded' ? 'Collapse' : 'Expand'}
             </span>
           </Button>
@@ -189,15 +202,25 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* Premium Navigation Content */}
-      <SidebarContent className="gap-6 py-6 px-3">
+      <SidebarContent className={cn(
+        "gap-6 py-6 px-3",
+        "transition-all duration-300",
+        "group-data-[collapsible=icon]:px-1"
+      )}>
         {navGroups.map((group) => {
           const isExpanded = expandedGroups[group.label] !== false
-          const itemCount = group.items.length
 
           return (
-            <div key={group.label} className="space-y-3">
-              {/* Group Header with Toggle */}
-              <div className="flex items-center justify-between px-3 group/header">
+            <div key={group.label} className={cn(
+              "space-y-3 transition-all duration-300",
+              "group-data-[collapsible=icon]:space-y-2"
+            )}>
+              {/* Group Header with Toggle - Hidden when collapsed */}
+              <div className={cn(
+                "flex items-center justify-between px-3 group/header",
+                "transition-all duration-300 overflow-hidden",
+                "group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:px-0"
+              )}>
                 <div className="space-y-0.5">
                   <h3 className={cn(
                     "text-xs font-bold uppercase tracking-widest",
@@ -232,7 +255,11 @@ export function AppSidebar() {
 
               {/* Navigation Items */}
               {isExpanded && (
-                <div className="space-y-1 pl-2">
+                <div className={cn(
+                  "space-y-1 pl-2",
+                  "transition-all duration-300",
+                  "group-data-[collapsible=icon]:pl-0"
+                )}>
                   {group.items.map((item) => {
                     const isActive = pathname === item.href
 
@@ -240,9 +267,11 @@ export function AppSidebar() {
                       <Link
                         key={item.href}
                         href={item.href}
+                        title={item.label}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2.5 rounded-lg",
                           "transition-all duration-200 group/item relative",
+                          "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
                           isActive
                             ? "bg-primary/12 text-primary"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -259,17 +288,21 @@ export function AppSidebar() {
                           isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-foreground"
                         )} />
 
-                        {/* Label */}
+                        {/* Label - Hidden when collapsed */}
                         <span className={cn(
-                          "flex-1 text-sm font-medium transition-all duration-200",
+                          "flex-1 text-sm font-medium transition-all duration-300 overflow-hidden whitespace-nowrap",
+                          "group-data-[collapsible=icon]:hidden",
                           isActive && "font-semibold"
                         )}>
                           {item.label}
                         </span>
 
-                        {/* Badge */}
+                        {/* Badge - Hidden when collapsed */}
                         {item.badge && (
-                          <div className="ml-auto">
+                          <div className={cn(
+                            "ml-auto transition-all duration-300 overflow-hidden",
+                            "group-data-[collapsible=icon]:hidden"
+                          )}>
                             {item.badge === 'Live' ? (
                               <PremiumLiveIndicator />
                             ) : (
@@ -288,13 +321,19 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Premium Footer Section */}
-      <SidebarFooter className="border-t border-border/30 px-4 py-4 gap-3">
+      <SidebarFooter className={cn(
+        "border-t border-border/30 px-4 py-4 gap-3",
+        "transition-all duration-300",
+        "group-data-[collapsible=icon]:px-2"
+      )}>
         {/* Settings Item */}
         <Link
           href="/settings"
+          title="Settings"
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg",
             "transition-all duration-200 group/settings relative",
+            "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
             pathname === '/settings'
               ? "bg-primary/12 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
@@ -308,7 +347,8 @@ export function AppSidebar() {
             pathname === '/settings' ? "text-primary" : "text-muted-foreground group-hover/settings:text-foreground"
           )} />
           <span className={cn(
-            "flex-1 text-sm font-medium transition-all duration-200",
+            "flex-1 text-sm font-medium transition-all duration-300 overflow-hidden whitespace-nowrap",
+            "group-data-[collapsible=icon]:hidden",
             pathname === '/settings' && "font-semibold"
           )}>
             Settings
@@ -319,23 +359,33 @@ export function AppSidebar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full",
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg",
               "transition-all duration-200 group/user",
-              "hover:bg-muted/40"
+              "hover:bg-muted/40",
+              "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
             )}>
               <Avatar className={cn(
                 "size-8 shrink-0 ring-2 ring-primary/20",
-                "group-hover/user:ring-primary/40 transition-all duration-200"
+                "group-hover/user:ring-primary/40 transition-all duration-200",
+                "group-data-[collapsible=icon]:size-6"
               )}>
                 <AvatarFallback className="bg-primary/15 text-primary font-semibold text-xs">
                   RS
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col gap-0.5 leading-none min-w-0 text-left flex-1">
+              <div className={cn(
+                "flex flex-col gap-0.5 leading-none min-w-0 text-left flex-1",
+                "transition-all duration-300 overflow-hidden",
+                "group-data-[collapsible=icon]:hidden"
+              )}>
                 <span className="text-sm font-medium text-foreground">Rajesh Sharma</span>
                 <span className="text-xs text-muted-foreground">Owner</span>
               </div>
-              <ChevronDown className="size-4 text-muted-foreground/50 shrink-0" />
+              <ChevronDown className={cn(
+                "size-4 text-muted-foreground/50 shrink-0",
+                "transition-all duration-300 overflow-hidden",
+                "group-data-[collapsible=icon]:hidden"
+              )} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="start" side="top">

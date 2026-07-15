@@ -9,8 +9,27 @@ import type {
   RevenueChartData,
   SidebarCounts,
   RestaurantStatus,
+  DashboardHeader,
 } from '@/types/dashboard'
 import type { SuccessResponse } from '@/types/api'
+
+/**
+ * Get dashboard header information
+ * Includes user name, greeting, restaurant/branch names, and business status
+ */
+export async function getDashboardHeader(
+  branchId: string
+): Promise<DashboardHeader> {
+  const response = await apiGet<SuccessResponse<DashboardHeader>>(
+    `/dashboard/header?branchId=${branchId}`
+  )
+
+  if (!response.success) {
+    throw new Error(response.message)
+  }
+
+  return response.data
+}
 
 /**
  * Get dashboard summary statistics

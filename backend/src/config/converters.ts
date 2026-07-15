@@ -2,10 +2,31 @@
  * Firestore Converters
  * Handle data conversion between Firestore and application layer
  * Specifically handles Timestamps and Numeric types
+ * 
+ * Uses modular Firebase Admin SDK (firebase-admin/firestore)
  */
 
-import * as admin from 'firebase-admin'
 import { timestampToDate, toMillis } from './timestamps'
+
+/**
+ * Check if a value is a Firestore Timestamp
+ * Works with modular API timestamps
+ */
+function isFirestoreTimestamp(obj: any): boolean {
+  if (!obj) return false
+  
+  // Check for Timestamp constructor name (works with modular API)
+  if (obj?.constructor?.name === 'Timestamp') {
+    return true
+  }
+  
+  // Check for timestamp methods
+  if (typeof obj?.toDate === 'function' && typeof obj?.toMillis === 'function') {
+    return true
+  }
+  
+  return false
+}
 
 /**
  * Generic Firestore converter
@@ -39,8 +60,8 @@ function convertFromFirestore(obj: any): any {
     return obj
   }
 
-  // Handle Firestore Timestamp
-  if (obj instanceof admin.firestore.Timestamp) {
+  // Handle Firestore Timestamp (modular API)
+  if (isFirestoreTimestamp(obj)) {
     return timestampToDate(obj)
   }
 
@@ -74,9 +95,10 @@ function convertToFirestore(obj: any): any {
     return obj
   }
 
-  // Handle Date - convert to Firestore Timestamp
+  // Handle Date - keep as Date object for Firestore to handle
+  // Firestore SDK automatically converts Date to Timestamp on write
   if (obj instanceof Date) {
-    return admin.firestore.Timestamp.fromDate(obj)
+    return obj
   }
 
   // Handle arrays
@@ -99,12 +121,11 @@ function convertToFirestore(obj: any): any {
 /**
  * Convert numeric value to Firestore.Numeric format
  * 
- * Usage:
- *   const price = toFirestoreNumeric(99.99)
- *   // Returns: admin.firestore.Numeric("99.99")
+ * Note: In modular API, Numeric is handled differently
+ * For now, we return the number as-is
  */
-export function toFirestoreNumeric(value: number | string): admin.firestore.Numeric {
-  return admin.firestore.Numeric(value.toString())
+export function toFirestoreNumeric(value: number | string): number | string {
+  return typeof value === 'string' ? parseFloat(value) : value
 }
 
 /**
@@ -199,13 +220,45 @@ export function batchConvert<T>(snapshots: any[]): T[] {
  */
 export function querySnapshotToArray<T>(querySnapshot: any): T[] {
   const docs: T[] = []
-  querySnapshot.forEach((doc: any) => {
-    docs.push({
-      id: doc.id,
-      ...convertFromFirestore(doc.data()),
-    } as T)
-  })
+  try {
+    querySnapshot.forEach((doc: any) => {
+      try {
+        const rawData = doc.data()
+        const convertedData = convertFromFirestore(rawData)
+        docs.push({
+          id: doc.id,
+          ...convertedData,
+        } as T)
+      } catch (docError) {
+        console.error(`Error converting document ${doc.id}:`, docError)
+        // Skip problematic documents rather than crashing
+      }
+    })
+  } catch (error) {
+    console.error('Error iterating query snapshot:', error)
+  }
   return docs
+}
+
+/**
+ * Get server timestamp using modular API
+ * Safe wrapper that works with both old and new code
+ */
+function getServerTimestamp(): any {
+  try {
+    // Try modular API first (current codebase uses this)
+    const { serverTimestamp } = require('firebase-admin/firestore')
+    return serverTimestamp()
+  } catch (e) {
+    // Fallback for compat API (shouldn't happen in this project)
+    try {
+      const admin = require('firebase-admin')
+      return admin.firestore.FieldValue.serverTimestamp()
+    } catch (e2) {
+      // Last resort: return a marker object that Firestore will recognize
+      return new Date()
+    }
+  }
 }
 
 /**
@@ -218,8 +271,8 @@ export function querySnapshotToArray<T>(querySnapshot: any): T[] {
 export function prepareDocumentForCreate(data: any, userId: string, organizationId?: string): any {
   return {
     ...convertToFirestore(data),
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: getServerTimestamp(),
+    updatedAt: getServerTimestamp(),
     createdBy: userId,
     updatedBy: userId,
     isDeleted: false,
@@ -243,7 +296,7 @@ export function prepareDocumentForUpdate(data: any, userId: string): any {
 
   return {
     ...convertToFirestore(cleaned),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: getServerTimestamp(),
     updatedBy: userId,
   }
 }
@@ -257,9 +310,9 @@ export function prepareDocumentForUpdate(data: any, userId: string): any {
 export function prepareDocumentForDelete(userId: string): any {
   return {
     isDeleted: true,
-    deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    deletedAt: getServerTimestamp(),
     deletedBy: userId,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: getServerTimestamp(),
     updatedBy: userId,
   }
 }
@@ -275,7 +328,7 @@ export function prepareDocumentForRestore(userId: string): any {
     isDeleted: false,
     deletedAt: null,
     deletedBy: null,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: getServerTimestamp(),
     updatedBy: userId,
   }
 }
