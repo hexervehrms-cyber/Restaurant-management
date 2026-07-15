@@ -44,9 +44,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return <AuthLoadingScreen />
   }
 
-  // Don't render dashboard until user and profile are confirmed
+  // Redirect to login if not authenticated (don't unmount dashboard)
   if (!user || !userProfile) {
-    return null
+    // Router.push already happened in useEffect
+    // Return loading screen instead of null to avoid unmounting dashboard
+    return <AuthLoadingScreen />
   }
 
   return (

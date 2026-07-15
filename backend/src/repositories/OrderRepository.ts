@@ -277,8 +277,8 @@ export class OrderRepository extends BaseRepository<OrderDocument> implements IR
 
       // Note: Firestore doesn't support "not in" for arrays, so we get all and filter
       if (excludeStatuses && excludeStatuses.length > 0) {
-        const orders = await this.findMany({ filters })
-        return orders.filter((order) => !excludeStatuses.includes(order.status)).length
+        const orderDocs = await this.findMany({ filters, orders: [{ field: 'createdAt', direction: 'desc' }] })
+        return orderDocs.filter((order) => !excludeStatuses.includes(order.status)).length
       }
 
       return await this.count({ filters })

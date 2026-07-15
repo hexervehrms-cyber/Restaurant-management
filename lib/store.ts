@@ -82,8 +82,10 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         ),
       }))
     } else {
+      // Generate stable ID using crypto API (available in Node and browser)
+      const id = `ci-${crypto.randomUUID()}`
       set((s) => ({
-        cartItems: [...s.cartItems, { ...item, id: `ci-${Date.now()}` }],
+        cartItems: [...s.cartItems, { ...item, id }],
       }))
     }
   },

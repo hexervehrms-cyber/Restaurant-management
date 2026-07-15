@@ -1,8 +1,18 @@
 'use client'
+'use client'
 
+import { useEffect, useState, useRef } from 'react'
 import {
-  IndianRupee, ShoppingBag, Users, Star, TrendingUp,
-  AlertTriangle, Clock, Flame, ArrowRight, ChefHat,
+  IndianRupee,
+  ShoppingBag,
+  Users,
+  Star,
+  TrendingUp,
+  AlertTriangle,
+  Clock,
+  Flame,
+  ArrowRight,
+  ChefHat,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,72 +23,283 @@ import { StatCard } from '@/components/ui/stat-card'
 import { RevenueChart } from '@/components/dashboard/revenue-chart'
 import { LiveOrdersFeed } from '@/components/dashboard/live-orders-feed'
 import { TableOccupancyGrid } from '@/components/dashboard/table-occupancy-grid'
-import {
-  todayStats, topDishes, inventoryAlerts, tables,
-} from '@/lib/mock-data'
+import { useDashboardKPIs } from '@/hooks/useDashboardKPIs'
+import type { DashboardKPIResponse } from '@/types/dashboard'
+import { topDishes, inventoryAlerts } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
 
-export function DashboardOverview() {
-  const occupiedTables = tables.filter((t) => t.status === 'occupied').length
-  const totalTables = tables.length
-  const occupancyPct = Math.round((occupiedTables / totalTables) * 100)
+interface DashboardOverviewProps {
+  branchId?: string
+  restaurantId?: string
+}
+
+/**
+ * Dashboard Overview Component
+ * 
+ * Phase 8.1: Enterprise Dashboard KPI Backend Integration
+ * 
+ * This component now displays live backend data instead of hardcoded values.
+ * 
+ * Data Flow:
+ * useDashboardKPIs Hook
+ *   ↓
+ * GET /api/dashboard/kpis
+ *   ↓
+ * DashboardKPIService.getDashboardKPIs()
+ *   ↓
+ * Multiple Firestore Queries (optimized)
+ *   ↓
+ * Real-time KPI Data
+ */
+export function DashboardOverview({ branchId = '829b1e49-87b3-4cc9-a4a9-4e719bf4440c', restaurantId = '' }: DashboardOverviewProps) {
+  const [updatingKPIs, setUpdatingKPIs] = useState<Set<string>>(new Set())
+  const prevKPIsRef = useRef<DashboardKPIResponse | null>(null)
+
+  console.log('[DashboardOverview] Rendered with branchId:', branchId)
+
+  // Subscribe to real-time dashboard KPIs via polling
+  const { data: kpis, loading, error, refresh, isLive } = useDashboardKPIs({
+    branchId: branchId || '829b1e49-87b3-4cc9-a4a9-4e719bf4440c',
+    enabled: true,
+    pollInterval: 60000, // Poll every 1 minute
+  })
+
+  console.log('[DashboardOverview] Hook state:', { loading, hasData: !!kpis, hasError: !!error, isLive })
+
+  // Detect which KPIs changed and show update animation
+  useEffect(() => {
+    if (!kpis || !prevKPIsRef.current) {
+      prevKPIsRef.current = kpis
+      return
+    }
+
+    const updated = new Set<string>()
+
+    // Check each KPI for changes - with defensive guards against undefined properties
+    if (kpis.revenue?.current !== prevKPIsRef.current.revenue?.current) {
+      updated.add('revenue')
+    }
+    if (kpis.orders?.current !== prevKPIsRef.current.orders?.current) {
+      updated.add('orders')
+    }
+    if (kpis.averageTicket?.current !== prevKPIsRef.current.averageTicket?.current) {
+      updated.add('averageTicket')
+    }
+    if (kpis.occupancy?.occupancyPercent !== prevKPIsRef.current.occupancy?.occupancyPercent) {
+      updated.add('occupancy')
+    }
+    if (kpis.guests?.current !== prevKPIsRef.current.guests?.current) {
+      updated.add('guests')
+    }
+    if (kpis.satisfaction?.rating !== prevKPIsRef.current.satisfaction?.rating) {
+      updated.add('satisfaction')
+    }
+
+    if (updated.size > 0) {
+      setUpdatingKPIs(updated)
+
+      // Clear animation after 1 second
+      const timer = setTimeout(() => {
+        setUpdatingKPIs(new Set())
+      }, 1000)
+
+      return () => clearTimeout(timer)
+    }
+
+    prevKPIsRef.current = kpis
+  }, [kpis])
+
+  // Loading state
+  if (loading && !kpis) {
+    console.log('[DashboardOverview] Rendering skeleton loader (loading=true, kpis=null)')
+    return (
+      <div className="space-y-6">
+        {/* Debug info - temporary */}
+        <div className="text-xs text-muted-foreground text-center py-2">
+          Loading KPI data...
+        </div>
+
+        {/* KPI Skeleton */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-24 rounded-lg bg-muted animate-pulse"
+            />
+          ))}
+        </div>
+
+        {/* Charts Skeleton */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 h-80 rounded-lg bg-muted animate-pulse" />
+          <div className="h-80 rounded-lg bg-muted animate-pulse" />
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error && !kpis) {
+    console.log('[DashboardOverview] Rendering error state:', error.message)
+    return (
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-destructive" />
+              <div>
+                <p className="text-sm font-medium">Failed to load dashboard data</p>
+                <p className="text-xs text-muted-foreground">{error.message}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refresh}
+              className="text-xs"
+            >
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Empty state
+  if (!kpis) {
+    console.log('[DashboardOverview] Rendering empty state (kpis is null, loading=false, error=null)')
+    return (
+      <Card>
+        <CardContent className="pt-6 text-center">
+          <p className="text-sm text-muted-foreground">No data available</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <>
-      {/* ── KPI Stats ─────────────────────────────────────── */}
+      {/* ── Live Status Indicator ────────────────────────────── */}
+      {isLive && (
+        <div className="mb-4 flex items-center gap-2">
+          <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+            <Flame className="size-3 mr-1 animate-pulse" />
+            Live Updates
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            Real-time data streaming
+          </span>
+        </div>
+      )}
+
+      {console.log('[DashboardOverview] ✓ Rendering KPI cards with data:', { 
+        revenue: kpis.revenue?.current,
+        orders: kpis.orders?.count,
+        occupancy: kpis.occupancy?.occupancyPercent,
+        guests: kpis.guests?.count,
+      })}
+
+      {/* Error banner if connection lost but data exists */}
+      {error && kpis && (
+        <Card className="mb-4 border-amber-200 bg-amber-50">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="size-4 text-amber-600" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900">
+                    Connection interrupted
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    {error.message}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refresh}
+                className="text-xs"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── KPI Stats (Now with Live Backend Data) ────────── */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        {/* Today's Revenue */}
         <StatCard
           title="Today's Revenue"
-          value={todayStats.revenue.value}
+          value={kpis.revenue?.current ?? 0}
           prefix="₹"
-          change={todayStats.revenue.change}
-          positive={todayStats.revenue.positive}
+          change={kpis.revenue?.changePercent ?? 0}
+          positive={kpis.revenue?.trend === 'up'}
           icon={IndianRupee}
           iconColor="text-primary"
           className="col-span-2 md:col-span-1 lg:col-span-2"
+          isUpdating={updatingKPIs.has('revenue')}
         />
+
+        {/* Total Orders */}
         <StatCard
           title="Total Orders"
-          value={todayStats.orders.value}
-          change={todayStats.orders.change}
-          positive={todayStats.orders.positive}
+          value={kpis.orders?.count ?? 0}
+          change={kpis.orders?.changePercent ?? 0}
+          positive={kpis.orders?.trend === 'up'}
           icon={ShoppingBag}
           iconColor="text-chart-1"
+          isUpdating={updatingKPIs.has('orders')}
         />
+
+        {/* Average Ticket */}
         <StatCard
           title="Avg Ticket"
-          value={todayStats.avgTicket.value}
+          value={kpis.averageTicket?.current ?? 0}
           prefix="₹"
-          change={todayStats.avgTicket.change}
-          positive={todayStats.avgTicket.positive}
+          change={kpis.averageTicket?.changePercent ?? 0}
+          positive={kpis.averageTicket?.trend === 'up'}
           icon={TrendingUp}
           iconColor="text-chart-3"
+          isUpdating={updatingKPIs.has('averageTicket')}
         />
+
+        {/* Table Occupancy */}
         <StatCard
           title="Table Occupancy"
-          value={todayStats.tableOccupancy.value}
+          value={kpis.occupancy?.occupancyPercent ?? 0}
           suffix="%"
-          change={todayStats.tableOccupancy.change}
-          positive={todayStats.tableOccupancy.positive}
+          change={kpis.occupancy?.change ?? 0}
+          positive={kpis.occupancy?.trend === 'up'}
           icon={Users}
           iconColor="text-chart-2"
+          isUpdating={updatingKPIs.has('occupancy')}
         />
+
+        {/* New Guests */}
         <StatCard
           title="New Guests"
-          value={todayStats.newCustomers.value}
-          change={todayStats.newCustomers.change}
-          positive={todayStats.newCustomers.positive}
+          value={kpis.guests?.count ?? 0}
+          change={kpis.guests?.changePercent ?? 0}
+          positive={kpis.guests?.trend === 'up'}
           icon={Users}
           iconColor="text-chart-4"
+          isUpdating={updatingKPIs.has('guests')}
         />
+
+        {/* Customer Satisfaction */}
         <StatCard
           title="Satisfaction"
-          value={todayStats.satisfaction.value}
+          value={kpis.satisfaction?.rating ?? 0}
           suffix="/5"
-          change={todayStats.satisfaction.change}
-          positive={todayStats.satisfaction.positive}
+          change={kpis.satisfaction?.change ?? 0}
+          positive={kpis.satisfaction?.trend === 'up'}
           icon={Star}
           iconColor="text-warning"
+          isUpdating={updatingKPIs.has('satisfaction')}
         />
       </div>
 
@@ -180,6 +401,11 @@ export function DashboardOverview() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Last Updated Indicator */}
+      <div className="mt-4 flex justify-end text-xs text-muted-foreground">
+        Last updated: {kpis?.lastUpdated ? new Date(kpis.lastUpdated).toLocaleTimeString() : 'N/A'}
       </div>
     </>
   )

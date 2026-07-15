@@ -12,6 +12,10 @@ import {
   getRevenueChartWeek,
 } from '@/api/services/dashboard.service'
 import { ValidationError } from '@/api/utils/errors'
+import { logger } from '@/lib/logger'
+
+// Prevent static generation for this API route
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,17 +47,18 @@ export async function GET(request: NextRequest) {
       chartData = await getRevenueChartWeek(branchId, tenantContext)
     }
 
+    logger.debug('Revenue chart data fetched successfully')
     return NextResponse.json(successResponse(chartData))
   } catch (error: any) {
-    console.error('Error fetching revenue chart:', error)
-
     if (error instanceof ValidationError) {
+      logger.warn('Validation error in revenue chart request', { error: error.message })
       return NextResponse.json(
         errorResponse(error.message, error.code),
         { status: 400 }
       )
     }
 
+    logger.error('Error fetching revenue chart', { error })
     return NextResponse.json(
       errorResponse(error.message, 'CHART_ERROR'),
       { status: 500 }

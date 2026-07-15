@@ -42,26 +42,48 @@ export class NotificationRepository extends BaseRepository<NotificationDocument>
    * @param organizationId - Organization ID
    * @param options - Query options for filtering and ordering
    * @returns Array of notifications
+   * @throws Error if query fails (caller should handle)
    */
   async findByUser(
     userId: string,
     organizationId: string,
     options?: QueryOptions
   ): Promise<NotificationDocument[]> {
-    const filters = [
-      { field: 'userId', operator: '==' as const, value: userId },
-      { field: 'organizationId', operator: '==' as const, value: organizationId },
-      ...(options?.filters || []),
-    ]
+    if (!userId || !organizationId) {
+      console.error('[NotificationRepository.findByUser] Missing required parameters', {
+        userId: !!userId,
+        organizationId: !!organizationId,
+      })
+      throw new Error('userId and organizationId are required')
+    }
 
-    return this.findMany({
-      ...options,
-      filters,
-      orders: [
-        { field: 'createdAt', direction: 'desc' },
-        ...(options?.orders || []),
-      ],
-    })
+    try {
+      const filters = [
+        { field: 'userId', operator: '==' as const, value: userId },
+        { field: 'organizationId', operator: '==' as const, value: organizationId },
+        ...(options?.filters || []),
+      ]
+
+      const result = await this.findMany({
+        ...options,
+        filters,
+        orders: [
+          { field: 'createdAt', direction: 'desc' },
+          ...(options?.orders || []),
+        ],
+      })
+
+      return result
+    } catch (error: any) {
+      console.error('[NotificationRepository.findByUser] Query failed', {
+        userId,
+        organizationId,
+        error: error.message,
+        code: error.code,
+      })
+      // Re-throw error for caller to handle - don't swallow it
+      throw error
+    }
   }
 
   /**

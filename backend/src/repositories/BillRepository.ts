@@ -322,29 +322,38 @@ export class BillRepository extends BaseRepository<Bill> {
     branchId: string,
     organizationId: string,
     paymentStatusFilter?: Bill['paymentStatus']
-  ): Promise<number> {
+  ): Promise<{ revenue: number; count: number }> {
     try {
       const filters: QueryOptions['filters'] = [
         { field: 'branchId', operator: '==', value: branchId },
         { field: 'organizationId', operator: '==', value: organizationId },
-        { field: 'createdAt', operator: '>=', value: startDate },
-        { field: 'createdAt', operator: '<=', value: endDate },
       ]
 
+      // Add paymentStatus filter BEFORE createdAt range (required for index field order)
       if (paymentStatusFilter) {
         filters.push({ field: 'paymentStatus', operator: '==', value: paymentStatusFilter })
       }
 
-      const bills = await this.findMany({ filters })
+      // Add range filters last (matches index: branchId, organizationId, paymentStatus, createdAt)
+      filters.push({ field: 'createdAt', operator: '>=', value: startDate })
+      filters.push({ field: 'createdAt', operator: '<=', value: endDate })
 
-      // Sum totalAmount fields
-      return bills.reduce((sum, bill) => {
+      const bills = await this.findMany({ 
+        filters,
+        orders: [{ field: 'createdAt', direction: 'desc' }]
+      })
+
+      // Sum totalAmount fields and count in single pass
+      let sum = 0
+      for (const bill of bills) {
         const amount = parseFloat(bill.totalAmount) || 0
-        return sum + amount
-      }, 0)
+        sum += amount
+      }
+
+      return { revenue: sum, count: bills.length }
     } catch (error) {
       console.error('Error calculating revenue sum:', error)
-      return 0
+      return { revenue: 0, count: 0 }
     }
   }
 

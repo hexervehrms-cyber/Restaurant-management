@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { getDashboardHeader } from '@/lib/api/dashboard'
 import type { DashboardHeader } from '@/types/dashboard'
 
@@ -21,6 +21,7 @@ export function useDashboardHeader(branchId: string | null): UseDashboardHeaderR
   const [data, setData] = useState<DashboardHeader | null>(null)
   const [loading, setLoading] = useState(!branchId)
   const [error, setError] = useState<string | null>(null)
+  const hasInitializedRef = useRef(false)
 
   const refetch = useCallback(async () => {
     if (!branchId) {
@@ -45,9 +46,17 @@ export function useDashboardHeader(branchId: string | null): UseDashboardHeaderR
     }
   }, [branchId])
 
+  // FIX: Only fetch once on mount per branchId
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    // Skip if we've already initialized for this branchId
+    if (hasInitializedRef.current) {
+      return
+    }
+    
+    hasInitializedRef.current = true
     refetch()
-  }, [refetch])
+  }, [branchId])
 
   return { data, loading, error, refetch }
 }

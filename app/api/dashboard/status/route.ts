@@ -12,6 +12,10 @@ import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { ValidationError, AuthorizationError } from '@/api/utils/errors'
 import { getRestaurantStatus, updateRestaurantStatus } from '@/api/services/dashboard-status.service'
+import { logger } from '@/lib/logger'
+
+// Prevent static generation for this API route
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {

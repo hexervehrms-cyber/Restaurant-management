@@ -8,6 +8,7 @@ import {
 } from 'firebase-admin/auth'
 import * as fs from 'fs'
 import * as path from 'path'
+import { logger } from '@/lib/logger'
 
 /**
  * Firebase Admin SDK Singleton
@@ -48,13 +49,11 @@ if (!globalThis.firebaseGlobal) {
 export async function initializeFirebase(): Promise<void> {
   // If already initialized, return immediately
   if (globalThis.firebaseGlobal.adminInstance) {
-    console.log('⚠ Firebase already initialized, skipping...')
     return
   }
 
   // If initialization is in progress, wait for it to complete
   if (globalThis.firebaseGlobal.initializationPromise) {
-    console.log('⏳ Firebase initialization in progress, waiting...')
     return globalThis.firebaseGlobal.initializationPromise
   }
 
@@ -68,17 +67,10 @@ export async function initializeFirebase(): Promise<void> {
         'firebase-admin.json'
       )
 
-      console.log(`📍 Credentials path: ${credentialsPath}`)
-      console.log(`📍 Credentials exist: ${fs.existsSync(credentialsPath)}`)
-      console.log(`📍 admin module type: ${typeof admin}`)
-      console.log(`📍 admin.credential type: ${typeof admin.credential}`)
-      console.log(`📍 admin.credential value: ${admin.credential}`)
-
       if (!fs.existsSync(credentialsPath)) {
-        console.warn(
-          `⚠ Firebase credentials not found at: ${credentialsPath}`
-        )
-        console.warn('ℹ Firebase features will be disabled. Add firebase-admin.json to enable.')
+        logger.warn('Firebase credentials not found', {
+          path: credentialsPath,
+        })
         return
       }
 
@@ -86,28 +78,21 @@ export async function initializeFirebase(): Promise<void> {
         fs.readFileSync(credentialsPath, 'utf-8')
       )
 
-      console.log(`📍 Service account loaded: ${serviceAccount ? 'yes' : 'no'}`)
-      console.log(`📍 About to initialize Firebase...`)
-
       // Initialize Firebase Admin
       globalThis.firebaseGlobal.adminInstance = initializeApp({
         credential: cert(serviceAccount as admin.ServiceAccount),
       })
 
-      console.log(`📍 Firebase initialized successfully`)
-
       // Get Firestore and Auth instances
       globalThis.firebaseGlobal.firestoreDb = firebaseGetFirestore(globalThis.firebaseGlobal.adminInstance)
       globalThis.firebaseGlobal.authService = firebaseGetAuth(globalThis.firebaseGlobal.adminInstance)
 
-      console.log('✓ Firebase Admin Initialized')
-      console.log('✓ Firestore Connected')
-      console.log('✓ Auth Initialized')
+      logger.debug('Firebase Admin initialized successfully')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.warn('⚠ Firebase Initialization Failed:')
-      console.warn(`  ${errorMessage}`)
-      console.warn('ℹ Firebase features will be disabled. Check credentials and try again.')
+      logger.error('Firebase Initialization Failed', { error: errorMessage })
+      // Don't re-throw during build - just log and continue
+      // This allows build to proceed without Firebase
     }
   })()
 
@@ -128,16 +113,72 @@ export function getAdmin(): any {
 }
 
 /**
+ * Lazy-loaded Firestore proxy for build time compatibility
+ * During build, returns a mock object; at runtime, returns the real instance.
+ */
+let firestoreProxy: any = null
+
+function createMockFirestore(): any {
+  const mockCollection = () => ({
+    doc: () => ({ set: () => Promise.resolve(), get: () => Promise.resolve({ exists: false }) }),
+    get: () => Promise.resolve({ docs: [] }),
+    where: () => mockCollection(),
+    orderBy: () => mockCollection(),
+    limit: () => mockCollection(),
+    offset: () => mockCollection(),
+    count: () => ({ get: () => Promise.resolve({ data: () => ({ count: 0 }) }) }),
+  })
+
+  const mockBatch = () => ({
+    set: () => {},
+    update: () => {},
+    delete: () => {},
+    commit: () => Promise.resolve(),
+  })
+
+  return {
+    collection: mockCollection,
+    batch: mockBatch,
+    runTransaction: () => Promise.resolve(null),
+  }
+}
+
+function createFirestoreProxy(): any {
+  if (globalThis.firebaseGlobal.firestoreDb) {
+    return globalThis.firebaseGlobal.firestoreDb
+  }
+
+  // Return a lazy proxy that will initialize on first real use
+  return new Proxy({}, {
+    get: (target, prop) => {
+      // Check if Firebase is now initialized
+      if (globalThis.firebaseGlobal.firestoreDb) {
+        return (globalThis.firebaseGlobal.firestoreDb as any)[prop]
+      }
+
+      // During build time, return mock
+      if (process.env.NEXT_RUNTIME === undefined) {
+        const mock = createMockFirestore()
+        return (mock as any)[prop]
+      }
+
+      // Runtime without initialization - throw error
+      throw new Error(
+        'Firestore not initialized. Call initializeFirebase() first.'
+      )
+    }
+  })
+}
+
+/**
  * Get Firestore instance
- * Ensures Firebase is initialized before returning
+ * Returns real instance at runtime, lazy proxy at build time
  */
 export function getFirestore(): any {
-  if (!globalThis.firebaseGlobal.firestoreDb) {
-    throw new Error(
-      'Firestore not initialized. Call initializeFirebase() first.'
-    )
+  if (!firestoreProxy) {
+    firestoreProxy = createFirestoreProxy()
   }
-  return globalThis.firebaseGlobal.firestoreDb
+  return firestoreProxy
 }
 
 /**

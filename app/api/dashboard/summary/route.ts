@@ -9,6 +9,10 @@ import { extractTenantContext } from '@/api/middleware/tenant'
 import { successResponse, errorResponse } from '@/api/utils/responses'
 import { getDashboardSummary } from '@/api/services/dashboard.service'
 import { ValidationError } from '@/api/utils/errors'
+import { logger } from '@/lib/logger'
+
+// Prevent static generation for this API route
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,17 +39,18 @@ export async function GET(request: NextRequest) {
     // Fetch dashboard summary
     const summary = await getDashboardSummary(branchId, tenantContext)
 
+    logger.debug('Dashboard summary fetched successfully', { branchId })
     return NextResponse.json(successResponse(summary))
   } catch (error: any) {
-    console.error('Error fetching dashboard summary:', error)
-
     if (error instanceof ValidationError) {
+      logger.warn('Validation error in dashboard summary request', { error: error.message })
       return NextResponse.json(
         errorResponse(error.message, error.code),
         { status: 400 }
       )
     }
 
+    logger.error('Error fetching dashboard summary', { error })
     return NextResponse.json(
       errorResponse(error.message, 'DASHBOARD_ERROR'),
       { status: 500 }

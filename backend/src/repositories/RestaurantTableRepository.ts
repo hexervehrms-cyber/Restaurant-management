@@ -196,6 +196,8 @@ export class RestaurantTableRepository
 
   /**
    * Calculate occupancy percentage
+   * OPTIMIZED: Uses single findByBranch() query + in-memory counting instead of 2 sequential Firestore calls
+   * 
    * Returns percentage of occupied tables out of total
    * 
    * @param branchId - Branch ID
@@ -207,17 +209,14 @@ export class RestaurantTableRepository
    */
   async occupancyPercent(branchId: string, organizationId: string): Promise<number> {
     try {
-      const totalTables = await this.count({
-        filters: [
-          { field: 'branchId', operator: '==', value: branchId },
-          { field: 'organizationId', operator: '==', value: organizationId },
-        ],
-      })
+      // OPTIMIZATION: Single Firestore query instead of 2 sequential counts
+      const tables = await this.findByBranch(branchId, organizationId)
+      
+      if (tables.length === 0) return 0
 
-      if (totalTables === 0) return 0
-
-      const occupiedCount = await this.countOccupied(branchId, organizationId)
-      return (occupiedCount / totalTables) * 100
+      // In-memory counting is faster than additional Firestore calls
+      const occupiedCount = tables.filter(t => t.status === 'occupied').length
+      return (occupiedCount / tables.length) * 100
     } catch (error) {
       console.error('Error calculating occupancy percent:', error)
       return 0
@@ -320,6 +319,8 @@ export class RestaurantTableRepository
 
   /**
    * Get occupancy analytics
+   * OPTIMIZED: Uses single findByBranch() query + in-memory grouping instead of 5 sequential COUNT queries
+   * 
    * Returns comprehensive occupancy metrics for a branch
    * 
    * @param branchId - Branch ID
@@ -334,17 +335,24 @@ export class RestaurantTableRepository
     organizationId: string
   ): Promise<TableOccupancyAnalytics> {
     try {
-      const totalTables = await this.count({
-        filters: [
-          { field: 'branchId', operator: '==', value: branchId },
-          { field: 'organizationId', operator: '==', value: organizationId },
-        ],
-      })
+      // OPTIMIZATION: Single Firestore query instead of 5 sequential COUNT calls
+      const tables = await this.findByBranch(branchId, organizationId)
+      
+      const totalTables = tables.length
+      
+      // In-memory grouping by status is faster than 5 separate Firestore count queries
+      const statusCounts = tables.reduce(
+        (acc, table) => {
+          acc[table.status] = (acc[table.status] || 0) + 1
+          return acc
+        },
+        {} as Record<string, number>
+      )
 
-      const occupiedTables = await this.countOccupied(branchId, organizationId)
-      const availableTables = await this.countAvailable(branchId, organizationId)
-      const reservedTables = await this.countByStatus(branchId, organizationId, 'reserved')
-      const maintenanceTables = await this.countByStatus(branchId, organizationId, 'maintenance')
+      const occupiedTables = statusCounts['occupied'] || 0
+      const availableTables = statusCounts['available'] || 0
+      const reservedTables = statusCounts['reserved'] || 0
+      const maintenanceTables = statusCounts['maintenance'] || 0
 
       const occupancyPercentage = totalTables > 0 ? (occupiedTables / totalTables) * 100 : 0
 

@@ -17,10 +17,22 @@ import { TenantContext } from '@/api/middleware/tenant'
 import { BillingService } from '@/repositories'
 import { CustomerRepository, OrderRepository, RestaurantTableRepository } from '@/repositories'
 
-const billingService = new BillingService()
-const customerRepo = new CustomerRepository()
-const orderRepo = new OrderRepository()
-const tableRepo = new RestaurantTableRepository()
+// Lazy initialization - defer repository creation until runtime
+let billingService: BillingService | null = null
+let customerRepo: CustomerRepository | null = null
+let orderRepo: OrderRepository | null = null
+let tableRepo: RestaurantTableRepository | null = null
+
+// Helper function to get or initialize services
+const getServices = () => {
+  if (!billingService) {
+    billingService = new BillingService()
+    customerRepo = new CustomerRepository()
+    orderRepo = new OrderRepository()
+    tableRepo = new RestaurantTableRepository()
+  }
+  return { billingService: billingService!, customerRepo: customerRepo!, orderRepo: orderRepo!, tableRepo: tableRepo! }
+}
 
 export interface DashboardSummary {
   todayRevenue: number

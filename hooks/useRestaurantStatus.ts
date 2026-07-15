@@ -12,7 +12,7 @@
  * - Auto-refresh capability
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { getOperationalStatus, updateOperationalStatus } from '@/lib/api/dashboard'
 import type { RestaurantOperationalStatus, OperationalStatus } from '@/types/dashboard'
 
@@ -43,6 +43,7 @@ export function useRestaurantStatus(options: UseRestaurantStatusOptions): UseRes
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const hasInitializedRef = useRef(false)
 
   /**
    * Fetch current status from API
@@ -132,17 +133,24 @@ export function useRestaurantStatus(options: UseRestaurantStatusOptions): UseRes
   )
 
   /**
-   * Load status on mount
+   * Load status on mount (only once)
    */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    // Skip if we've already initialized
+    if (hasInitializedRef.current) {
+      return
+    }
+    
+    hasInitializedRef.current = true
     refresh()
-  }, [refresh])
+  }, [branchId, restaurantId])
 
   /**
-   * Auto-refresh interval
+   * Auto-refresh interval (only once initialized)
    */
   useEffect(() => {
-    if (!autoRefresh) {
+    if (!autoRefresh || !hasInitializedRef.current) {
       return
     }
 

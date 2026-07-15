@@ -10,16 +10,21 @@
 export async function register() {
   // Only run on server side
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Import Firebase initialization from backend config
-    const { initializeFirebase, isFirebaseInitialized } = await import(
-      './backend/src/config/firebase'
-    )
+    try {
+      // Import Firebase initialization from backend config
+      const { initializeFirebase, isFirebaseInitialized } = await import(
+        './backend/src/config/firebase'
+      )
 
-    // Initialize Firebase if not already initialized
-    if (!isFirebaseInitialized()) {
-      console.log('🔄 Initializing Firebase from instrumentation hook...')
-      await initializeFirebase()
-      console.log('✓ Firebase initialized from instrumentation hook')
+      // Initialize Firebase if not already initialized
+      if (!isFirebaseInitialized()) {
+        await initializeFirebase()
+      }
+    } catch (error) {
+      // Log errors but don't crash during build
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to initialize Firebase in instrumentation hook:', error)
+      }
     }
   }
 }

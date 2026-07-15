@@ -7,6 +7,7 @@ import { DashboardOverview } from '@/components/dashboard/dashboard-overview'
 const MOCK_BRANCH_ID = '829b1e49-87b3-4cc9-a4a9-4e719bf4440c'
 
 export default function DashboardPage() {
+  console.log('[Dashboard Page] Rendered with branchId:', MOCK_BRANCH_ID)
   return (
     <>
       <TopNavbar title="Dashboard" />
@@ -15,7 +16,7 @@ export default function DashboardPage() {
         <DashboardHeader branchId={MOCK_BRANCH_ID} />
         
         {/* Rest of dashboard content */}
-        <DashboardOverview />
+        <DashboardOverview branchId={MOCK_BRANCH_ID} />
       </main>
     </>
   )

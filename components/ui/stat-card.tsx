@@ -16,12 +16,13 @@ interface StatCardProps {
   suffix?: string
   className?: string
   loading?: boolean
+  isUpdating?: boolean // True when value just changed in real-time
 }
 
 export function StatCard({
   title, value, change, positive, icon: Icon,
   iconColor = 'text-primary', prefix, suffix,
-  className, loading = false,
+  className, loading = false, isUpdating = false,
 }: StatCardProps) {
   if (loading) {
     return (
@@ -41,12 +42,19 @@ export function StatCard({
   }
 
   return (
-    <Card className={cn('overflow-hidden group hover:shadow-md transition-shadow duration-200', className)}>
+    <Card className={cn(
+      'overflow-hidden group hover:shadow-md transition-all duration-200',
+      isUpdating && 'ring-1 ring-primary/50 shadow-sm shadow-primary/20',
+      className
+    )}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
-            <p className="text-2xl font-bold tracking-tight text-foreground">
+            <p className={cn(
+              'text-2xl font-bold tracking-tight text-foreground transition-colors duration-300',
+              isUpdating && 'text-primary/80'
+            )}>
               {prefix && <span className="text-lg font-semibold text-muted-foreground">{prefix}</span>}
               {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
               {suffix && <span className="text-base font-normal text-muted-foreground ml-1">{suffix}</span>}
@@ -62,9 +70,12 @@ export function StatCard({
             )}
           </div>
           <div className={cn(
-            'flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/15',
+            'flex size-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
+            isUpdating 
+              ? 'bg-primary/20 shadow-sm shadow-primary/30 scale-110' 
+              : 'bg-primary/10 group-hover:bg-primary/15',
           )}>
-            <Icon className={cn('size-5', iconColor)} />
+            <Icon className={cn('size-5 transition-colors duration-200', iconColor)} />
           </div>
         </div>
       </CardContent>

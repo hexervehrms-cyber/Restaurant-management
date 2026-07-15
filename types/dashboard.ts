@@ -1,7 +1,69 @@
 /**
- * Dashboard Types and DTOs
+ * Dashboard KPI Types and DTOs
+ * Phase 8.1: Enterprise Dashboard KPI Backend Integration
  */
 
+// ─── KPI Value Structure ───────────────────────────────
+export interface KPIMetric {
+  current: number
+  previous: number
+  change: number
+  changePercent: number
+  trend: 'up' | 'down' | 'neutral'
+}
+
+// ─── Individual KPI Responses ───────────────────────────
+export interface KPIRevenue extends KPIMetric {
+  currency: 'INR'
+}
+
+export interface KPIOrders extends KPIMetric {
+  count: number
+}
+
+export interface KPIAverageTicket extends KPIMetric {
+  currency: 'INR'
+}
+
+export interface KPITableOccupancy {
+  occupancy: number
+  occupiedCount: number
+  availableCount: number
+  reservedCount: number
+  cleaningCount: number
+  totalCount: number
+  occupancyPercent: number
+  previousOccupancyPercent: number
+  change: number
+  trend: 'up' | 'down' | 'neutral'
+}
+
+export interface KPINewGuests extends KPIMetric {
+  count: number
+}
+
+export interface KPISatisfaction {
+  rating: number
+  previousRating: number
+  ratingCount: number
+  change: number
+  trend: 'up' | 'down' | 'neutral'
+  scale: 5
+}
+
+// ─── Aggregated Dashboard KPI Response ────────────────
+export interface DashboardKPIResponse {
+  revenue: KPIRevenue
+  orders: KPIOrders
+  averageTicket: KPIAverageTicket
+  occupancy: KPITableOccupancy
+  guests: KPINewGuests
+  satisfaction: KPISatisfaction
+  lastUpdated: string
+  timestamp: number
+}
+
+// ─── Legacy Dashboard Summary (for compatibility) ──────
 export interface DashboardSummary {
   todayRevenue: number
   todayRevenueChangePercent: number

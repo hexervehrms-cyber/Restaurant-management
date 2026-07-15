@@ -378,18 +378,17 @@ export class BillingService {
     organizationId: string
   ): Promise<{ revenue: number; count: number }> {
     try {
-      const revenue = await this.billRepository.getRevenueSum(startDate, endDate, branchId, organizationId, 'completed')
-      const count = await this.billRepository.count({
-        filters: [
-          { field: 'branchId', operator: '==', value: branchId },
-          { field: 'organizationId', operator: '==', value: organizationId },
-          { field: 'createdAt', operator: '>=', value: startDate },
-          { field: 'createdAt', operator: '<=', value: endDate },
-          { field: 'paymentStatus', operator: '==', value: 'completed' },
-        ],
-      })
-
-      return { revenue, count }
+      // Fixed: No longer calling findMany() twice
+      // Now getRevenueSum returns both revenue and count in one query
+      const result = await this.billRepository.getRevenueSum(
+        startDate, 
+        endDate, 
+        branchId, 
+        organizationId, 
+        'completed'
+      )
+      
+      return result
     } catch (error) {
       console.error('Error calculating revenue:', error)
       return { revenue: 0, count: 0 }

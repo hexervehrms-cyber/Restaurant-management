@@ -508,6 +508,123 @@ export class BaseRepository<T extends BaseDocument> {
   }
 
   /**
+   * REAL-TIME - Subscribe to single document changes
+   * 
+   * Returns an unsubscribe function that must be called to cleanup the listener
+   *
+   * Usage:
+   *   const unsubscribe = await repo.onSnapshotDoc(docId, (doc) => {
+   *     console.log('Document updated:', doc)
+   *   })
+   *   
+   *   // Later, to stop listening:
+   *   unsubscribe()
+   */
+  async onSnapshotDoc(
+    id: string,
+    callback: (doc: T | null) => void,
+    onError?: (error: Error) => void
+  ): Promise<() => void> {
+    try {
+      const unsubscribe = this.getDocRef(id).onSnapshot(
+        (snap) => {
+          if (snap.exists) {
+            const data = snap.data()
+            callback({ id: snap.id, ...data } as T)
+          } else {
+            callback(null)
+          }
+        },
+        (error) => {
+          console.error(`Error listening to document ${id}:`, error)
+          if (onError) {
+            onError(error as Error)
+          }
+        }
+      )
+
+      return unsubscribe
+    } catch (error) {
+      console.error(`Error setting up listener for document ${id}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * REAL-TIME - Subscribe to query results
+   * 
+   * Returns an unsubscribe function that must be called to cleanup the listener
+   * Callback receives the full array of matching documents on every change
+   *
+   * Usage:
+   *   const unsubscribe = await repo.onSnapshotQuery(
+   *     {
+   *       filters: [
+   *         { field: 'branchId', operator: '==', value: branchId },
+   *         { field: 'status', operator: '==', value: 'active' }
+   *       ],
+   *       orders: [{ field: 'createdAt', direction: 'desc' }]
+   *     },
+   *     (docs) => {
+   *       console.log('Query results updated:', docs)
+   *     }
+   *   )
+   *   
+   *   // Later, to stop listening:
+   *   unsubscribe()
+   */
+  async onSnapshotQuery(
+    options: QueryOptions | undefined,
+    callback: (docs: T[]) => void,
+    onError?: (error: Error) => void
+  ): Promise<() => void> {
+    try {
+      let query: any = this.getCollection()
+
+      // Apply filters
+      if (options?.filters) {
+        for (const filter of options.filters) {
+          query = query.where(filter.field, filter.operator, filter.value)
+        }
+      }
+
+      // Apply ordering
+      if (options?.orders) {
+        for (const order of options.orders) {
+          query = query.orderBy(order.field, order.direction)
+        }
+      }
+
+      // Apply limit
+      if (options?.limit) {
+        query = query.limit(options.limit)
+      }
+
+      // Set up real-time listener
+      const unsubscribe = query.onSnapshot(
+        (snap: any) => {
+          const docs = snap.docs.map((doc: any) => {
+            const data = doc.data()
+            return { id: doc.id, ...data } as T
+          })
+          callback(docs)
+        },
+        (error: any) => {
+          console.error('Error listening to query:', error)
+          if (onError) {
+            onError(error as Error)
+          }
+        }
+      )
+
+      return unsubscribe
+    } catch (error) {
+      console.error('Error setting up real-time query listener:', error)
+      throw error
+    }
+  }
+
+  /**
    * HELPER - Get error message from error object
    */
   protected getErrorMessage(error: any): string {
