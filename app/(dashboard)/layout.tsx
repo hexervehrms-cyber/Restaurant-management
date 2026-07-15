@@ -50,10 +50,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="flex h-screen">
       <AppSidebar />
-      <SidebarInset className="min-h-screen overflow-x-hidden">
-        {children}
+      <SidebarInset className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

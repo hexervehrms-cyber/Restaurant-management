@@ -11,12 +11,12 @@ interface UIStore {
   commandOpen: boolean
   activeModule: string
   theme: 'dark' | 'light' | 'system'
-  restaurantStatus: 'open' | 'busy' | 'closed'
+  restaurantStatus: 'open' | 'rush' | 'closed'
   setSidebarCollapsed: (v: boolean) => void
   setCommandOpen: (v: boolean) => void
   setActiveModule: (v: string) => void
   setTheme: (v: 'dark' | 'light' | 'system') => void
-  setRestaurantStatus: (v: 'open' | 'busy' | 'closed') => void
+  setRestaurantStatus: (v: 'open' | 'rush' | 'closed') => void
 }
 
 export const useUIStore = create<UIStore>()(

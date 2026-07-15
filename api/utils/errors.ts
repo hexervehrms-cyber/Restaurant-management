@@ -15,8 +15,8 @@ export class ApiError extends Error {
 }
 
 export class ValidationError extends ApiError {
-  constructor(message: string, details?: Record<string, any>) {
-    super(400, 'VALIDATION_ERROR', message, details)
+  constructor(message: string, code: string = 'VALIDATION_ERROR', details?: Record<string, any>) {
+    super(400, code, message, details)
     this.name = 'ValidationError'
   }
 }

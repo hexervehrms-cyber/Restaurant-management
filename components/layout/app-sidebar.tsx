@@ -7,72 +7,187 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, UtensilsCrossed, TableProperties, CalendarDays,
   ChefHat, ShoppingCart, BarChart3, Package, Users, Settings,
-  CreditCard, Zap, ChevronDown, Building2, ChevronRight, ChevronLeft,
+  CreditCard, Zap, Building2, ChevronRight, ChevronLeft, ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger, DropdownMenuSeparator,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/context/AuthContext'
 
+// Shared spacing constants
+const SIDEBAR_SPACING = {
+  contentPaddingX: 'px-1.5',
+  contentPaddingY: 'py-2',
+  itemPaddingX: 'px-2.5',
+  itemPaddingY: 'py-2.5',
+  itemHeight: 'h-9',
+  iconSize: 'size-5',
+  iconGap: 'gap-3',
+  collapsedSize: 'size-9',
+  collapsedPaddingX: 'px-2',
+  sectionGapTop: 'mt-6',
+  sectionGapBottom: 'mb-1',
+  itemGap: 'gap-1.5',
+}
+
 /**
- * Sign Out Menu Item
+ * Counter Badge - Premium Circular Design
  */
-function SignOutMenuItem() {
+function CounterBadge({ count }: { count: string }) {
+  return (
+    <div className="inline-flex items-center justify-center rounded-full text-xs font-medium bg-muted/50 text-muted-foreground/80 transition-all duration-200 hover:bg-muted/70" style={{ width: '20px', height: '20px' }}>
+      {count}
+    </div>
+  )
+}
+
+/**
+ * User Profile Footer Component
+ * Premium account section with dropdown menu
+ */
+function UserProfileFooter() {
   const router = useRouter()
-  const { logout } = useAuth()
-  const [isLoading, setIsLoading] = React.useState(false)
+  const { logout, userProfile } = useAuth()
+  const { state: sidebarState } = useSidebar()
+  const isCollapsed = sidebarState === 'collapsed'
 
   const handleSignOut = async () => {
-    setIsLoading(true)
     try {
       await logout()
       router.push('/login')
     } catch (error) {
       console.error('Sign out failed:', error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  return (
-    <DropdownMenuItem 
-      onClick={handleSignOut}
-      disabled={isLoading}
-      className="text-destructive cursor-pointer"
-    >
-      {isLoading ? 'Signing out...' : 'Sign Out'}
-    </DropdownMenuItem>
-  )
-}
+  // Get user initials from first and last name
+  const getInitials = () => {
+    if (!userProfile) return 'U'
+    const firstName = userProfile.firstName?.charAt(0) || ''
+    const lastName = userProfile.lastName?.charAt(0) || ''
+    return (firstName + lastName).toUpperCase() || 'U'
+  }
 
-/**
- * Minimal Live Indicator (Slack/Linear style)
- */
-function LiveIndicator() {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="size-1.5 rounded-full bg-success animate-pulse" />
-      <span className="text-xs text-muted-foreground font-medium">Live</span>
-    </div>
-  )
-}
+  // Get display name
+  const getDisplayName = () => {
+    if (!userProfile) return 'User'
+    if (userProfile.firstName && userProfile.lastName) {
+      return `${userProfile.firstName} ${userProfile.lastName}`
+    }
+    return userProfile.firstName || userProfile.email?.split('@')[0] || 'User'
+  }
 
-/**
- * Counter Badge
- */
-function CounterBadge({ count }: { count: string }) {
+  // Format role display (e.g., "restaurant_owner" → "Owner")
+  const getFormattedRole = () => {
+    if (!userProfile?.role) return 'User'
+    const role = userProfile.role
+    // Handle snake_case or kebab-case
+    const formatted = role
+      .replace(/_/g, ' ')
+      .replace(/-/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+    return formatted
+  }
+
   return (
-    <div className="inline-flex items-center justify-center size-5 rounded-full text-xs font-semibold bg-muted text-foreground">
-      {count}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "flex items-center justify-between gap-3",
+            SIDEBAR_SPACING.itemHeight,
+            SIDEBAR_SPACING.itemPaddingY,
+            "px-3",
+            "rounded-lg text-sm",
+            "transition-all duration-200",
+            "text-muted-foreground hover:text-foreground",
+            "hover:bg-muted/40",
+            "w-full",
+            "group/profile"
+          )}
+          title="Account menu"
+        >
+          {/* Avatar - Increased size */}
+          <div className={cn(
+            "flex items-center justify-center flex-none",
+            "rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 text-primary",
+            "text-xs font-semibold",
+            "transition-transform duration-200 group-hover/profile:scale-105"
+          )} style={{ width: '36px', height: '36px' }}>
+            {getInitials()}
+          </div>
+
+          {/* User Info - Hidden when collapsed */}
+          {!isCollapsed && (
+            <>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold text-foreground truncate leading-snug">
+                  {getDisplayName()}
+                </p>
+                <p className="text-xs text-muted-foreground/70 truncate leading-tight">
+                  {getFormattedRole()}
+                </p>
+              </div>
+
+              {/* Dropdown Chevron */}
+              <ChevronDown className="size-4 text-muted-foreground/40 shrink-0 transition-all duration-200 group-hover/profile:text-muted-foreground group-hover/profile:translate-y-0.5" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="start" side="top" className="w-56 mb-2">
+        {/* User Header in Dropdown */}
+        <div className="px-4 py-3 space-y-0.5">
+          <p className="text-sm font-semibold text-foreground">
+            {getDisplayName()}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {userProfile?.email || 'user@example.com'}
+          </p>
+        </div>
+
+        <DropdownMenuSeparator />
+
+        {/* Menu Items */}
+        <DropdownMenuItem>
+          Switch Branch
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          Account Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          Preferences
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {/* Sign Out */}
+        <DropdownMenuItem
+          onClick={handleSignOut}
+          className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20 cursor-pointer"
+        >
+          Sign Out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -82,7 +197,7 @@ const navGroups = [
     label: 'Restaurant',
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { label: 'POS Terminal', href: '/pos', icon: ShoppingCart, badge: 'Live' },
+      { label: 'POS Terminal', href: '/pos', icon: ShoppingCart },
       { label: 'Tables', href: '/tables', icon: TableProperties },
       { label: 'Reservations', href: '/reservations', icon: CalendarDays, badge: '3' },
       { label: 'Live Orders', href: '/orders', icon: Zap, badge: '5' },
@@ -91,7 +206,7 @@ const navGroups = [
   {
     label: 'Kitchen',
     items: [
-      { label: 'Kitchen Display', href: '/kitchen', icon: ChefHat, badge: 'Live' },
+      { label: 'Kitchen Display', href: '/kitchen', icon: ChefHat },
       { label: 'Menu Management', href: '/menu', icon: UtensilsCrossed },
       { label: 'Inventory', href: '/inventory', icon: Package, badge: '4' },
     ],
@@ -134,204 +249,195 @@ export function AppSidebar() {
   return (
     <Sidebar 
       collapsible="icon" 
-      className="border-r border-border/40 bg-background"
+      className="border-r border-border/30 bg-background"
     >
-      {/* Workspace Header with Restaurant Card */}
-      <SidebarHeader className={cn(
-        "border-b border-border/30 px-4 py-3 gap-0",
-        "transition-all duration-300"
-      )}>
-        {/* Restaurant Card */}
+      {/* ─── WORKSPACE HEADER (Premium Identity Card) ─── */}
+      <SidebarHeader className="border-b border-border/20 px-2 py-4">
         <button
           onClick={toggleSidebar}
           className={cn(
-            "flex items-center gap-3 px-3 py-3 rounded-lg border border-border/30",
-            "bg-gradient-to-br from-primary/8 via-primary/5 to-transparent",
-            "hover:bg-muted/40 transition-all duration-200",
-            "group text-left w-full"
+            "flex items-center justify-between gap-3 px-3 py-3 rounded-lg",
+            "hover:bg-muted/30 transition-all duration-220",
+            "group text-left w-full",
+            "border border-transparent hover:border-border/10",
+            "hover:shadow-sm"
           )}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          {/* Restaurant Icon */}
-          <div className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0 transition-all duration-200">
-            <Building2 className="size-4" />
+          {/* Restaurant Icon - Increased to 48px */}
+          <div className="flex items-center justify-center rounded-lg bg-gradient-to-br from-primary/25 to-primary/5 text-primary shrink-0 transition-all duration-220 group-hover:scale-110 group-hover:shadow-sm"
+            style={{ width: '48px', height: '48px' }}>
+            <Building2 className="size-5" />
           </div>
 
-          {/* Restaurant Info (Hidden when collapsed) */}
+          {/* Restaurant Identity - Strong Typography */}
           {!isCollapsed && (
-            <>
-              <div className="flex-1 min-w-0 space-y-0.5">
-                <h2 className="font-semibold text-sm text-foreground truncate">Spice Garden</h2>
-                <p className="text-xs text-muted-foreground truncate">Mumbai Central</p>
-              </div>
-
-              {/* Collapse Chevron */}
-              <ChevronLeft className="size-4 text-muted-foreground/50 shrink-0 transition-transform duration-200 group-hover:text-muted-foreground" />
-            </>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-base text-foreground truncate leading-snug">
+                Spice Garden
+              </h2>
+              <p className="text-xs text-muted-foreground/60 truncate leading-tight mt-1">
+                Mumbai Central
+              </p>
+            </div>
           )}
 
-          {/* Collapsed State - Only Icon */}
-          {isCollapsed && (
-            <ChevronRight className="size-4 text-muted-foreground/50 absolute right-3 transition-transform duration-200" />
-          )}
+          {/* Collapse Button - Centered Vertically */}
+          <div className={cn(
+            "flex shrink-0 text-muted-foreground/40 transition-all duration-220",
+            isCollapsed && "invisible"
+          )}>
+            <ChevronLeft className="size-4" />
+          </div>
         </button>
       </SidebarHeader>
 
-      {/* Navigation Content */}
-      <SidebarContent className={cn(
-        "gap-4 py-4 px-2",
-        "transition-all duration-300"
-      )}>
-        {navGroups.map((group) => {
-          const isExpanded = expandedGroups[group.label] !== false
+      {/* ─── NAVIGATION CONTENT (Premium Hierarchy) ─── */}
+      <SidebarContent className={cn(SIDEBAR_SPACING.contentPaddingX, SIDEBAR_SPACING.contentPaddingY, "gap-1")}>
+        <TooltipProvider delayDuration={300}>
+          {navGroups.map((group, groupIdx) => {
+            const isExpanded = expandedGroups[group.label] !== false
 
-          return (
-            <div key={group.label} className="space-y-2">
-              {/* Group Label (Hidden when collapsed) */}
-              {!isCollapsed && (
-                <div className="flex items-center justify-between px-3 h-7 group/label">
-                  <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">
-                    {group.label}
-                  </p>
-                  <button
-                    onClick={() => toggleGroup(group.label)}
-                    className="opacity-0 group-hover/label:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted/40"
-                    title={isExpanded ? 'Collapse' : 'Expand'}
-                  >
-                    <ChevronRight 
+            return (
+              <div 
+                key={group.label}
+                className={cn(
+                  groupIdx > 0 && SIDEBAR_SPACING.sectionGapTop,
+                  "space-y-1"
+                )}
+              >
+                {/* ─── SECTION HEADER (Premium Typography) ─── */}
+                {!isCollapsed && (
+                  <div className={cn(
+                    "flex items-center justify-between",
+                    "px-3 py-2.5",
+                    "group/label"
+                  )}>
+                    <p className="text-xs font-medium text-muted-foreground/50 uppercase tracking-wider">
+                      {group.label}
+                    </p>
+                    <button
+                      onClick={() => toggleGroup(group.label)}
                       className={cn(
-                        "size-3.5 text-muted-foreground/60 transition-transform duration-200",
-                        isExpanded && "rotate-90"
-                      )} 
-                    />
-                  </button>
-                </div>
-              )}
-
-              {/* Navigation Items */}
-              {isExpanded && (
-                <div className={cn(
-                  "space-y-1",
-                  isCollapsed && "flex flex-col items-center"
-                )}>
-                  {group.items.map((item) => {
-                    const isActive = pathname === item.href
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        title={item.label}
+                        "opacity-0 group-hover/label:opacity-100",
+                        "transition-opacity duration-200",
+                        "p-1 rounded hover:bg-muted/40"
+                      )}
+                      title={isExpanded ? 'Collapse' : 'Expand'}
+                    >
+                      <ChevronRight 
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 h-9 rounded-lg text-sm",
-                          "transition-all duration-200 group/nav relative",
-                          isCollapsed && "justify-center px-2 w-9 h-9",
-                          isActive
-                            ? "bg-primary/12 text-primary font-medium"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                        )}
-                      >
-                        {/* Left accent bar for active (not shown when collapsed) */}
-                        {isActive && !isCollapsed && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r" />
-                        )}
+                          "size-3.5 text-muted-foreground/30 transition-transform duration-200",
+                          isExpanded && "rotate-90"
+                        )} 
+                      />
+                    </button>
+                  </div>
+                )}
 
-                        {/* Icon */}
-                        <item.icon className={cn(
-                          "size-4 shrink-0 transition-colors",
-                          isActive ? "text-primary" : "text-muted-foreground group-hover/nav:text-foreground"
-                        )} />
+                {/* ─── NAVIGATION ITEMS (Perfect Alignment) ─── */}
+                {isExpanded && (
+                  <div className={cn(
+                    isCollapsed && "flex flex-col items-center gap-1"
+                  )}>
+                    {group.items.map((item) => {
+                      const isActive = pathname === item.href
+                      const hasCount = item.badge && item.badge !== 'Live'
 
-                        {/* Label (Hidden when collapsed) */}
-                        {!isCollapsed && (
-                          <>
-                            <span className="flex-1 min-w-0 truncate">
+                      const navItemContent = (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          title={item.label}
+                          className={cn(
+                            // Base layout
+                            "flex items-center justify-start",
+                            SIDEBAR_SPACING.itemHeight,
+                            SIDEBAR_SPACING.itemPaddingY,
+                            "px-3",
+                            "rounded-lg text-sm",
+                            // Animation
+                            "transition-all duration-200",
+                            "group/nav",
+                            // Collapsed state - Fixed centering
+                            isCollapsed && cn(
+                              "justify-center",
+                              SIDEBAR_SPACING.collapsedSize,
+                              "px-0 py-0 mx-auto",
+                              "relative"
+                            ),
+                            // Active state - Premium lightweight design
+                            isActive
+                              ? cn(
+                                "bg-blue-500/8 text-primary font-semibold",
+                                "border-l-3 border-primary pl-2",
+                                isCollapsed && "border-l-0 pl-0 bg-primary/10"
+                              )
+                              : cn(
+                                "text-muted-foreground hover:text-foreground",
+                                "hover:bg-muted/40",
+                                "border-l-3 border-transparent pl-2",
+                                isCollapsed && "border-l-0 pl-0"
+                              )
+                          )}
+                        >
+                          {/* Icon - Perfect sizing and centering */}
+                          <div className="flex items-center justify-center flex-none">
+                            <item.icon className={cn(
+                              SIDEBAR_SPACING.iconSize,
+                              "transition-all duration-200",
+                              isActive ? "text-primary" : "text-muted-foreground group-hover/nav:text-foreground"
+                            )} />
+                          </div>
+
+                          {/* Label - Hidden when collapsed */}
+                          {!isCollapsed && (
+                            <>
+                              <span className="flex-1 min-w-0 truncate ml-3">
+                                {item.label}
+                              </span>
+
+                              {/* Badge - Right aligned */}
+                              {hasCount && (
+                                <div className="ml-2 shrink-0 flex items-center">
+                                  <CounterBadge count={item.badge || ''} />
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </Link>
+                      )
+
+                      // Tooltip when collapsed
+                      if (isCollapsed) {
+                        return (
+                          <Tooltip key={item.href}>
+                            <TooltipTrigger asChild>
+                              {navItemContent}
+                            </TooltipTrigger>
+                            <TooltipContent 
+                              side="right" 
+                              className="bg-foreground/90 text-background text-xs font-medium px-2 py-1"
+                            >
                               {item.label}
-                            </span>
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      }
 
-                            {/* Status/Count Badge (Right-aligned) */}
-                            {item.badge && (
-                              <div className="ml-auto shrink-0">
-                                {item.badge === 'Live' ? (
-                                  <LiveIndicator />
-                                ) : (
-                                  <CounterBadge count={item.badge} />
-                                )}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </Link>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
+                      return navItemContent
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </TooltipProvider>
       </SidebarContent>
 
-      {/* User Profile Section */}
-      <SidebarFooter className={cn(
-        "border-t border-border/30 p-2",
-        "transition-all duration-300"
-      )}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn(
-              "flex items-center gap-3 px-3 py-2.5 h-10 rounded-lg",
-              "transition-all duration-200 group/user",
-              "hover:bg-muted/40 w-full",
-              isCollapsed && "justify-center px-2 w-10 h-10"
-            )}>
-              <Avatar className={cn(
-                "shrink-0 ring-2 ring-border/40 transition-all duration-200",
-                isCollapsed ? "size-6" : "size-8"
-              )}>
-                <AvatarFallback className="bg-primary/15 text-primary font-semibold text-xs">
-                  RS
-                </AvatarFallback>
-              </Avatar>
-              {!isCollapsed && (
-                <>
-                  <div className="flex flex-col gap-0.5 min-w-0 text-left flex-1">
-                    <span className="text-sm font-medium text-foreground truncate">Rajesh Sharma</span>
-                    <span className="text-xs text-muted-foreground truncate">Owner</span>
-                  </div>
-                  <ChevronDown className="size-4 text-muted-foreground/50 shrink-0" />
-                </>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="start" side="top">
-            {/* User Header */}
-            <div className="px-2 py-2 space-y-1">
-              <p className="text-sm font-semibold text-foreground">Rajesh Sharma</p>
-              <p className="text-xs text-muted-foreground">Owner</p>
-            </div>
-
-            <DropdownMenuSeparator />
-
-            {/* Current Branch */}
-            <div className="px-2 py-2 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Current Branch
-              </p>
-              <p className="text-sm text-foreground">Mumbai Central</p>
-              <button className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors mt-1">
-                Change Branch →
-              </button>
-            </div>
-
-            <DropdownMenuSeparator />
-
-            {/* Account Options */}
-            <DropdownMenuItem className="text-sm">Profile</DropdownMenuItem>
-            <DropdownMenuItem className="text-sm">Settings</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <SignOutMenuItem />
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* ─── USER PROFILE FOOTER (Premium Account Section) ─── */}
+      <SidebarFooter className="border-t border-border/20 px-2 py-3">
+        <UserProfileFooter />
       </SidebarFooter>
     </Sidebar>
   )

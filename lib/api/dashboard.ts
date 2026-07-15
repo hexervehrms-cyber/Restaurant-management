@@ -3,13 +3,14 @@
  * All API calls related to dashboard
  */
 
-import { apiGet } from '@/lib/api/client'
+import { apiGet, apiPatch } from '@/lib/api/client'
 import type {
   DashboardSummary,
   RevenueChartData,
   SidebarCounts,
   RestaurantStatus,
   DashboardHeader,
+  RestaurantOperationalStatus,
 } from '@/types/dashboard'
 import type { SuccessResponse } from '@/types/api'
 
@@ -100,7 +101,6 @@ export async function getRestaurantStatus(branchId: string): Promise<RestaurantS
  * Get notifications
  */
 export async function getNotifications(limit: number = 10) {
-  const { apiGet } = await import('@/lib/api/client')
   const response = await apiGet<any>(
     `/notifications?limit=${limit}`
   )
@@ -110,4 +110,46 @@ export async function getNotifications(limit: number = 10) {
   }
 
   return response.data.notifications
+}
+
+/**
+ * Get restaurant operational status
+ */
+export async function getOperationalStatus(
+  branchId: string,
+  restaurantId: string
+): Promise<RestaurantOperationalStatus> {
+  const response = await apiGet<SuccessResponse<RestaurantOperationalStatus>>(
+    `/dashboard/status?branchId=${branchId}&restaurantId=${restaurantId}`
+  )
+
+  if (!response.success) {
+    throw new Error(response.message)
+  }
+
+  return response.data
+}
+
+/**
+ * Update restaurant operational status
+ */
+export async function updateOperationalStatus(
+  branchId: string,
+  restaurantId: string,
+  operationalStatus: string
+): Promise<RestaurantOperationalStatus> {
+  const response = await apiPatch<SuccessResponse<RestaurantOperationalStatus>>(
+    `/dashboard/status`,
+    {
+      branchId,
+      restaurantId,
+      operationalStatus,
+    }
+  )
+
+  if (!response.success) {
+    throw new Error(response.message)
+  }
+
+  return response.data
 }

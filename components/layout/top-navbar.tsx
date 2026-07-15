@@ -1,69 +1,72 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Moon, Sun, Command, Clock, ChevronDown, Bell } from 'lucide-react'
+import { Search, Moon, Sun, Command, Clock, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CommandPalette } from '@/components/ui/command-palette'
 import { NotificationCenter } from '@/components/ui/notification-center'
 import { RestaurantStatusDropdown } from '@/components/dashboard/restaurant-status-dropdown'
 import { useTheme } from '@/hooks/useTheme'
+import { useAuth } from '@/context/AuthContext'
 import { useUIStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
-/**
- * Live Clock Component
- * Displays current time with live updates
- */
 function LiveClock() {
   const [time, setTime] = useState<Date | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Set initial time after hydration
     setTime(new Date())
     setMounted(true)
 
+    // Update every minute
     const id = setInterval(() => setTime(new Date()), 60000)
     return () => clearInterval(id)
   }, [])
 
+  // Prevent hydration mismatch by not rendering until after hydration
   if (!mounted) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Clock className="size-4" />
-        <span className="font-mono">--:--</span>
+      <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground">
+        <Clock className="size-3.5" />
+        <span className="w-10">--:--</span>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Clock className="size-4" />
-      <span className="font-mono">
-        {time?.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-      </span>
+    <div className="flex items-center gap-1.5 text-sm font-mono text-muted-foreground">
+      <Clock className="size-3.5" />
+      {time?.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
     </div>
   )
 }
 
-/**
- * Production-Quality Header Component
- * Single-row toolbar with proper layout and spacing
- */
 interface TopNavbarProps {
   title?: string
   subtitle?: string
+  branchId?: string
+  restaurantId?: string
 }
 
-export function TopNavbar({ title, subtitle }: TopNavbarProps) {
+export function TopNavbar({ title, subtitle, branchId, restaurantId }: TopNavbarProps) {
   const [commandOpen, setCommandOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { commandOpen: storeCommandOpen, setCommandOpen: setStoreCommandOpen } = useUIStore()
+  const { userProfile } = useAuth()
 
+  // Use passed props or fallback to userProfile
+  const effectiveBranchId = branchId || userProfile?.branchId
+  const effectiveRestaurantId = restaurantId || userProfile?.restaurantId
+
+  // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Sync state between local state and store
   useEffect(() => {
     if (storeCommandOpen !== commandOpen) {
       setCommandOpen(storeCommandOpen)
@@ -72,14 +75,8 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
 
   if (!mounted) {
     return (
-      <header className="sticky top-0 z-40 h-16 border-b border-border/40 bg-background/95 backdrop-blur-sm">
-        <div className="flex h-full items-center justify-between px-6 gap-4">
-          {title && (
-            <div className="flex items-center gap-4 min-w-0">
-              <h1 className="font-semibold text-sm text-foreground truncate">{title}</h1>
-            </div>
-          )}
-        </div>
+      <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-sm px-4">
+        <div className="flex-1" />
       </header>
     )
   }
@@ -87,72 +84,119 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
   return (
     <>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      
-      {/* Production Header - 64px height */}
-      <header className="sticky top-0 z-40 h-16 border-b border-border/40 bg-background/95 backdrop-blur-sm transition-all duration-300">
-        <div className="flex h-full items-center justify-between px-6 gap-4">
-          
-          {/* LEFT SECTION: Title + Time */}
-          <div className="flex items-center gap-4 min-w-0">
-            {title && (
-              <>
-                <h1 className="font-semibold text-sm text-foreground truncate">{title}</h1>
-                <div className="hidden md:block w-px h-6 bg-border/40" />
-                <div className="hidden md:flex">
-                  <LiveClock />
-                </div>
-              </>
-            )}
+      <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border/50 bg-background/95 backdrop-blur-sm px-4 transition-all duration-300">
+        {/* Left: Restaurant Identity */}
+        <div className="flex items-center gap-2.5 min-w-0 group/identity">
+          <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0 transition-all duration-200 group-hover/identity:bg-primary/15">
+            <Building2 className="size-4" />
           </div>
-
-          {/* CENTER SECTION: Search */}
-          <div className="hidden md:flex flex-1 max-w-sm">
-            <button
-              onClick={() => setCommandOpen(true)}
-              className={cn(
-                "flex items-center gap-2 w-full px-3.5 py-2 rounded-lg",
-                "bg-muted/40 border border-border/40",
-                "text-muted-foreground text-sm",
-                "hover:bg-muted/60 hover:border-border/60",
-                "transition-all duration-200",
-                "focus:outline-none focus:ring-2 focus:ring-primary/50"
-              )}
-              type="button"
-            >
-              <Search className="size-4 flex-shrink-0" />
-              <span className="flex-1 text-left">Search...</span>
-              <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded border border-border/40 bg-background text-xs font-medium text-muted-foreground">
-                <Command className="size-3" />K
-              </kbd>
-            </button>
+          <div className="flex flex-col min-w-0">
+            <span className="font-semibold text-sm text-foreground truncate">Spice Garden</span>
+            <span className="text-xs text-muted-foreground/80 truncate">Mumbai Central Branch</span>
           </div>
+        </div>
 
-          {/* RIGHT SECTION: Store Status + Notifications + Theme + Profile */}
-          <div className="flex items-center gap-1">
-            
-            {/* Store Status - hidden on small screens */}
+        <div className="flex-1" />
+
+        {/* Center/Right: Clock, Search, Status */}
+        <div className="flex items-center gap-3">
+          {/* Clock */}
+          <LiveClock />
+
+          {/* Search */}
+          <button
+            className="hidden md:flex items-center gap-2 text-muted-foreground h-8 px-3 w-56 justify-start rounded-lg border border-border/60 bg-background/50 text-sm hover:bg-muted/70 hover:border-border/80 transition-all duration-200 ease-out"
+            onClick={() => setCommandOpen(true)}
+            type="button"
+          >
+            <Search className="size-3.5 shrink-0" />
+            <span className="text-xs flex-1 text-left truncate">Search...</span>
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-muted/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <Command className="size-2.5" />K
+            </kbd>
+          </button>
+
+          {/* Restaurant Status - Single operational status */}
+          {effectiveBranchId && effectiveRestaurantId && (
             <div className="hidden lg:flex">
-              <RestaurantStatusDropdown />
+              <RestaurantStatusDropdown 
+                branchId={effectiveBranchId} 
+                restaurantId={effectiveRestaurantId} 
+              />
             </div>
+          )}
 
-            {/* Notifications */}
-            <NotificationCenter limit={10} />
+          {/* Notifications */}
+          <NotificationCenter limit={10} />
 
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-lg hover:bg-muted/60 transition-colors duration-200"
-              onClick={toggleTheme}
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? (
-                <Sun className="size-4" />
-              ) : (
-                <Moon className="size-4" />
-              )}
-            </Button>
-          </div>
+          {/* Theme toggle */}
+          <style>{`
+            @keyframes sun-rotate-fade-out {
+              from {
+                opacity: 1;
+                transform: rotate(0deg);
+              }
+              to {
+                opacity: 0;
+                transform: rotate(180deg);
+              }
+            }
+            @keyframes moon-fade-in {
+              from {
+                opacity: 0;
+                transform: rotate(-180deg);
+              }
+              to {
+                opacity: 1;
+                transform: rotate(0deg);
+              }
+            }
+            @keyframes sun-fade-in {
+              from {
+                opacity: 0;
+                transform: rotate(180deg);
+              }
+              to {
+                opacity: 1;
+                transform: rotate(0deg);
+              }
+            }
+            @keyframes moon-rotate-fade-out {
+              from {
+                opacity: 1;
+                transform: rotate(0deg);
+              }
+              to {
+                opacity: 0;
+                transform: rotate(-180deg);
+              }
+            }
+            .theme-icon-to-dark {
+              animation: sun-rotate-fade-out 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            .theme-icon-moon-enter {
+              animation: moon-fade-in 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            .theme-icon-to-light {
+              animation: moon-rotate-fade-out 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            .theme-icon-sun-enter {
+              animation: sun-fade-in 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+          `}</style>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 transition-all duration-200 hover:bg-muted/70"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? (
+              <Sun key="sun" className="size-4 theme-icon-sun-enter" />
+            ) : (
+              <Moon key="moon" className="size-4 theme-icon-moon-enter" />
+            )}
+          </Button>
         </div>
       </header>
     </>

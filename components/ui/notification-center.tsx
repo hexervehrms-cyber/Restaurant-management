@@ -1,6 +1,7 @@
 'use client'
 
 import { Bell, Trash2, Check, CheckCheck } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -25,6 +26,9 @@ export function NotificationCenter({ limit = 10 }: NotificationCenterProps) {
     clearAll,
   } = useNotificationsManager(limit)
 
+  const [isOpen, setIsOpen] = useState(false)
+  const [animate, setAnimate] = useState(false)
+
   const readNotifications = notifications.filter((n) => n.read)
   const unreadNotifications = notifications.filter((n) => !n.read)
 
@@ -43,20 +47,69 @@ export function NotificationCenter({ limit = 10 }: NotificationCenterProps) {
     }
   }
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open)
+    if (open) {
+      setAnimate(true)
+      setTimeout(() => setAnimate(false), 300)
+    }
+  }
+
   return (
-    <DropdownMenu>
-      {/* 
-        MenuPrimitive.Trigger is a button. 
-        Put content directly inside. Do NOT nest Button.
-      */}
-      <DropdownMenuTrigger className="relative inline-flex items-center justify-center size-8 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-        <Bell className="size-4" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-            {unreadCount}
-          </span>
-        )}
-      </DropdownMenuTrigger>
+    <>
+      <style>{`
+        @keyframes bell-swing {
+          0% {
+            transform: rotate(0deg);
+            transform-origin: top center;
+          }
+          10% {
+            transform: rotate(-12deg);
+            transform-origin: top center;
+          }
+          20% {
+            transform: rotate(12deg);
+            transform-origin: top center;
+          }
+          30% {
+            transform: rotate(-10deg);
+            transform-origin: top center;
+          }
+          40% {
+            transform: rotate(8deg);
+            transform-origin: top center;
+          }
+          50% {
+            transform: rotate(-6deg);
+            transform-origin: top center;
+          }
+          60% {
+            transform: rotate(4deg);
+            transform-origin: top center;
+          }
+          75% {
+            transform: rotate(-2deg);
+            transform-origin: top center;
+          }
+          100% {
+            transform: rotate(0deg);
+            transform-origin: top center;
+          }
+        }
+        .bell-swing-animate {
+          animation: bell-swing 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+      `}</style>
+
+      <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
+        <DropdownMenuTrigger className="relative inline-flex items-center justify-center size-8 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Bell className={cn('size-4', animate && 'bell-swing-animate')} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+              {unreadCount}
+            </span>
+          )}
+        </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-96 p-0">
         {/* Header */}
@@ -218,5 +271,6 @@ export function NotificationCenter({ limit = 10 }: NotificationCenterProps) {
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   )
 }
