@@ -273,13 +273,26 @@ export async function getRestaurantStatus(
 
 /**
  * Update restaurant operational status
- * Validates status and updates Firestore
+ * Optionally set a temporary override with duration
+ * 
+ * @param restaurantId - Restaurant ID
+ * @param status - New operational status
+ * @param userId - User making the change
+ * @param tenantContext - Tenant context
+ * @param overrideDurationMinutes - Optional: how long to override (in minutes). Must be 5-1440.
+ * @returns Updated status response
+ * 
+ * VALIDATION:
+ * - Duration must be between 5 and 1440 minutes (5 minutes to 24 hours)
+ * - Override expiration time is calculated and stored
+ * - Override is automatically cleared when expiration time is reached
  */
 export async function updateRestaurantStatus(
   restaurantId: string,
   status: OperationalStatus,
   userId: string,
-  tenantContext: TenantContext
+  tenantContext: TenantContext,
+  overrideDurationMinutes?: number
 ): Promise<RestaurantStatusResponse> {
   try {
     // Validate status
@@ -287,10 +300,52 @@ export async function updateRestaurantStatus(
       throw new Error(`Invalid operational status: ${status}`)
     }
 
+    // Validate and constrain duration if provided
+    if (overrideDurationMinutes !== undefined && overrideDurationMinutes !== null) {
+      // Type check
+      if (typeof overrideDurationMinutes !== 'number') {
+        throw new Error('overrideDurationMinutes must be a number')
+      }
+
+      // Range validation
+      if (overrideDurationMinutes < 5) {
+        throw new Error('overrideDurationMinutes must be at least 5 minutes')
+      }
+
+      if (overrideDurationMinutes > 1440) {
+        throw new Error('overrideDurationMinutes cannot exceed 1440 minutes (24 hours)')
+      }
+
+      // Integer validation
+      if (!Number.isInteger(overrideDurationMinutes)) {
+        throw new Error('overrideDurationMinutes must be an integer')
+      }
+    }
+
     const settingsRepo = new RestaurantSettingsRepository()
     
-    // Update status in repository
-    await settingsRepo.updateOperationalStatus(restaurantId, status, userId)
+    // If duration provided, set override instead of permanent status
+    if (overrideDurationMinutes && overrideDurationMinutes > 0) {
+      // Calculate expiration timestamp
+      const expiresAt = new Date()
+      expiresAt.setMinutes(expiresAt.getMinutes() + overrideDurationMinutes)
+
+      // Verify expiration is in the future
+      const now = new Date()
+      if (expiresAt <= now) {
+        throw new Error('Calculated expiration time is invalid')
+      }
+
+      await settingsRepo.setOperationalStatusOverride(
+        restaurantId,
+        status,
+        overrideDurationMinutes,
+        userId
+      )
+    } else {
+      // Update status permanently (clear any existing override)
+      await settingsRepo.updateOperationalStatus(restaurantId, status, userId)
+    }
 
     // Get updated status
     const settings = await settingsRepo.findByRestaurant(restaurantId)
@@ -305,6 +360,24 @@ export async function updateRestaurantStatus(
     )
     const currentTime = getCurrentTime(timezone)
 
+    // Determine if override is active and not expired
+    let hasManualOverride = false
+    let overrideExpiresAt: string | undefined
+
+    if (settings.operationalStatusOverride && settings.operationalStatusOverrideUntil) {
+      const now = new Date()
+      const expirationTime = new Date(settings.operationalStatusOverrideUntil)
+
+      // Check if override has expired
+      if (now < expirationTime) {
+        hasManualOverride = true
+        overrideExpiresAt = expirationTime.toISOString()
+      } else {
+        // Override has expired, clear it
+        await settingsRepo.clearOperationalStatusOverride(restaurantId, userId)
+      }
+    }
+
     return {
       operationalStatus: status,
       isOpen: status === 'OPEN' || status === 'RUSH_HOUR',
@@ -312,7 +385,8 @@ export async function updateRestaurantStatus(
       closingTime,
       currentTime,
       timezone,
-      hasManualOverride: false,
+      hasManualOverride,
+      overrideExpiresAt,
     }
   } catch (error) {
     console.error('Error updating restaurant status:', error)

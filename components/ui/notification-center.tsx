@@ -64,31 +64,31 @@ export function NotificationCenter({ limit = 10 }: NotificationCenterProps) {
             transform-origin: top center;
           }
           10% {
-            transform: rotate(-12deg);
+            transform: rotate(-14deg);
             transform-origin: top center;
           }
           20% {
-            transform: rotate(12deg);
+            transform: rotate(14deg);
             transform-origin: top center;
           }
           30% {
-            transform: rotate(-10deg);
+            transform: rotate(-11deg);
             transform-origin: top center;
           }
           40% {
-            transform: rotate(8deg);
+            transform: rotate(9deg);
             transform-origin: top center;
           }
           50% {
             transform: rotate(-6deg);
             transform-origin: top center;
           }
-          60% {
-            transform: rotate(4deg);
+          65% {
+            transform: rotate(3deg);
             transform-origin: top center;
           }
-          75% {
-            transform: rotate(-2deg);
+          80% {
+            transform: rotate(-1deg);
             transform-origin: top center;
           }
           100% {
@@ -97,13 +97,18 @@ export function NotificationCenter({ limit = 10 }: NotificationCenterProps) {
           }
         }
         .bell-swing-animate {
-          animation: bell-swing 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          animation: bell-swing 800ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bell-swing-animate {
+            animation: none;
+          }
         }
       `}</style>
 
       <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-        <DropdownMenuTrigger className="relative inline-flex items-center justify-center size-8 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-          <Bell className={cn('size-4', animate && 'bell-swing-animate')} />
+        <DropdownMenuTrigger className="relative inline-flex items-center justify-center size-8 rounded-lg transition-all duration-200 hover:bg-muted/70 active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Bell className={cn('size-4 transition-transform', animate && 'bell-swing-animate')} />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
               {unreadCount}

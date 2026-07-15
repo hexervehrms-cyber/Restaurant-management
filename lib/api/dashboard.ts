@@ -132,11 +132,17 @@ export async function getOperationalStatus(
 
 /**
  * Update restaurant operational status
+ * 
+ * @param branchId - Branch ID
+ * @param restaurantId - Restaurant ID
+ * @param operationalStatus - New operational status (OPEN, CLOSED, RUSH_HOUR)
+ * @param overrideDurationMinutes - Optional: how long to override (in minutes). If provided, sets a temporary override instead of permanent status
  */
 export async function updateOperationalStatus(
   branchId: string,
   restaurantId: string,
-  operationalStatus: string
+  operationalStatus: string,
+  overrideDurationMinutes?: number
 ): Promise<RestaurantOperationalStatus> {
   const response = await apiPatch<SuccessResponse<RestaurantOperationalStatus>>(
     `/dashboard/status`,
@@ -144,6 +150,7 @@ export async function updateOperationalStatus(
       branchId,
       restaurantId,
       operationalStatus,
+      ...(overrideDurationMinutes !== undefined && { overrideDurationMinutes }),
     }
   )
 

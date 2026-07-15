@@ -65,9 +65,10 @@ export function useRestaurantStatus(options: UseRestaurantStatusOptions): UseRes
   /**
    * Update status with optimistic UI
    * Shows new status immediately, reverts on error
+   * Throws errors with proper status codes for permission handling
    */
   const updateStatus = useCallback(
-    async (newStatus: OperationalStatus) => {
+    async (newStatus: OperationalStatus, overrideDurationMinutes?: number) => {
       if (!status) {
         setError(new Error('Status not yet loaded'))
         return
@@ -80,25 +81,46 @@ export function useRestaurantStatus(options: UseRestaurantStatusOptions): UseRes
         // Optimistic update
         setIsSaving(true)
         setError(null)
+        
+        let overrideExpiresAt: string | undefined
+        if (overrideDurationMinutes && overrideDurationMinutes > 0) {
+          const expiryDate = new Date()
+          expiryDate.setMinutes(expiryDate.getMinutes() + overrideDurationMinutes)
+          overrideExpiresAt = expiryDate.toISOString()
+        }
+
         setStatus((prev) =>
           prev
             ? {
                 ...prev,
                 operationalStatus: newStatus,
                 isOpen: newStatus === 'OPEN' || newStatus === 'RUSH_HOUR',
+                hasManualOverride: !!overrideDurationMinutes,
+                overrideExpiresAt,
               }
             : null
         )
 
-        // Call API
-        const updatedStatus = await updateOperationalStatus(branchId, restaurantId, newStatus)
+        // Call API with optional override duration
+        const updatedStatus = await updateOperationalStatus(
+          branchId,
+          restaurantId,
+          newStatus,
+          overrideDurationMinutes
+        )
 
         // Update with server response
         setStatus(updatedStatus)
-      } catch (err) {
+      } catch (err: any) {
         // Rollback on error
         setStatus(previousStatus)
-        const error = err instanceof Error ? err : new Error('Failed to update status')
+        
+        // Create error object with status code
+        const error: any = err instanceof Error ? err : new Error('Failed to update status')
+        if (err?.status) {
+          error.status = err.status
+        }
+        
         setError(error)
         console.error('Error updating restaurant status:', error)
         throw error

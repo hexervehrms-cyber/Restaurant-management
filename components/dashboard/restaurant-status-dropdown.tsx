@@ -1,22 +1,41 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { CheckCircle, AlertCircle, Clock, Zap, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { useState } from 'react'
+import { AlertCircle, CheckCircle, Zap, Clock, Loader2, Lock } from 'lucide-react'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useRestaurantStatus } from '@/hooks/useRestaurantStatus'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import { canUserEditStatus } from '@/lib/utils/restaurant-status'
 
 export interface RestaurantStatusDropdownProps {
   branchId: string
   restaurantId: string
+  userRole?: string
 }
 
-export function RestaurantStatusDropdown({ branchId, restaurantId }: RestaurantStatusDropdownProps) {
+// Roles that can modify restaurant status
+const EDITABLE_ROLES = ['restaurant_owner', 'branch_manager', 'admin']
+
+export function RestaurantStatusDropdown({
+  branchId,
+  restaurantId,
+  userRole,
+}: RestaurantStatusDropdownProps) {
+  const { userProfile } = useAuth()
   const { status, isSaving, error, updateStatus } = useRestaurantStatus({
     branchId,
     restaurantId,
@@ -26,52 +45,63 @@ export function RestaurantStatusDropdown({ branchId, restaurantId }: RestaurantS
 
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  const [toastError, setToastError] = useState(false)
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
+  const [showPermissionError, setShowPermissionError] = useState(false)
 
+  // Determine user's actual role
+  const actualUserRole = userRole || userProfile?.role || 'viewer'
+  const canEditStatus = canUserEditStatus(actualUserRole)
+
+  // Status options - simplified
   const statusOptions = [
     {
       value: 'OPEN' as const,
       label: 'Open',
       icon: CheckCircle,
-      color: 'text-green-500',
-      bgColor: 'bg-green-500/10 border-green-500/30',
       dotColor: 'bg-green-500',
-      description: 'Restaurant is open for orders',
     },
     {
       value: 'RUSH_HOUR' as const,
       label: 'Rush Hour',
       icon: Zap,
-      color: 'text-amber-500',
-      bgColor: 'bg-amber-500/10 border-amber-500/30',
       dotColor: 'bg-amber-500',
-      description: 'High demand, longer wait times',
     },
     {
       value: 'CLOSED' as const,
       label: 'Closed',
       icon: Clock,
-      color: 'text-red-500',
-      bgColor: 'bg-red-500/10 border-red-500/30',
       dotColor: 'bg-red-500',
-      description: 'Restaurant is closed',
     },
   ]
 
-  const currentStatus = status ? statusOptions.find((s) => s.value === status.operationalStatus) : null
+  const currentStatus = status
+    ? statusOptions.find((s) => s.value === status.operationalStatus)
+    : null
 
   const handleStatusChange = async (newStatus: 'OPEN' | 'RUSH_HOUR' | 'CLOSED') => {
+    if (!canEditStatus) {
+      setShowPermissionError(true)
+      setTimeout(() => setShowPermissionError(false), 4000)
+      return
+    }
+
     try {
       await updateStatus(newStatus)
-      setToastMessage(`Status changed to ${statusOptions.find(s => s.value === newStatus)?.label}`)
-      setToastError(false)
+
+      setToastType('success')
+      setToastMessage(`Status changed to ${statusOptions.find((s) => s.value === newStatus)?.label}`)
       setShowToast(true)
       setTimeout(() => setShowToast(false), 3000)
-    } catch (err) {
-      setToastMessage('Failed to update status. Please try again.')
-      setToastError(true)
-      setShowToast(true)
-      setTimeout(() => setShowToast(false), 4000)
+    } catch (err: any) {
+      if (err.status === 403) {
+        setShowPermissionError(true)
+        setTimeout(() => setShowPermissionError(false), 4000)
+      } else {
+        setToastType('error')
+        setToastMessage('Failed to update status')
+        setShowToast(true)
+        setTimeout(() => setShowToast(false), 4000)
+      }
     }
   }
 
@@ -79,33 +109,58 @@ export function RestaurantStatusDropdown({ branchId, restaurantId }: RestaurantS
   if (!status) {
     return (
       <div className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-1.5 text-sm font-medium">
-        <Loader2 className="size-3 animate-spin" />
-        <span>Loading...</span>
+        <Loader2 className="size-3 animate-spin text-muted-foreground" />
+        <span className="text-muted-foreground">Loading...</span>
       </div>
     )
   }
 
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger 
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-1.5 text-sm font-medium transition-all hover:bg-muted/70 hover:border-border/80 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isSaving}
-        >
-          {currentStatus && (
-            <>
-              <div className={cn('size-2 rounded-full', currentStatus.dotColor)} />
-              <span>● {currentStatus.label}</span>
-              {status.operationalStatus === 'OPEN' && status.closingTime && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  Closes {status.closingTime}
-                </span>
-              )}
-              {isSaving && <Loader2 className="size-3 ml-1 animate-spin" />}
-            </>
-          )}
-        </DropdownMenuTrigger>
+  // Error state
+  if (error && !status) {
+    return (
+      <div className="inline-flex items-center gap-2">
+        <div className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-600">
+          <AlertCircle className="size-3" />
+          <span>Status unavailable</span>
+        </div>
+      </div>
+    )
+  }
 
+  const trigger = (
+    <div
+      className={cn(
+        'inline-flex items-center gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-1.5 text-sm font-medium transition-all',
+        canEditStatus
+          ? 'hover:bg-muted/70 hover:border-border/80 cursor-pointer'
+          : 'opacity-75 cursor-not-allowed',
+        isSaving && 'opacity-60'
+      )}
+      title={
+        isSaving
+          ? 'Updating status...'
+          : canEditStatus
+            ? 'Click to change status'
+            : 'You do not have permission to change status'
+      }
+    >
+      {currentStatus && (
+        <>
+          <div className={cn('size-2 rounded-full', currentStatus.dotColor)} />
+          <span>{currentStatus.label}</span>
+          {isSaving && <Loader2 className="size-3 animate-spin" />}
+        </>
+      )}
+    </div>
+  )
+
+  const dropdownContent = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={isSaving || !canEditStatus}>
+        {trigger}
+      </DropdownMenuTrigger>
+
+      {canEditStatus && (
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Restaurant Status</DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -117,49 +172,78 @@ export function RestaurantStatusDropdown({ branchId, restaurantId }: RestaurantS
               disabled={isSaving}
               className={cn(
                 'flex items-center gap-3 cursor-pointer',
-                status.operationalStatus === option.value && 'bg-primary/10',
+                status.operationalStatus === option.value && 'bg-muted',
                 isSaving && 'opacity-50 cursor-not-allowed'
               )}
             >
-              <option.icon className={cn('size-4', option.color)} />
-              <div className="flex flex-col gap-0.5 flex-1">
-                <span className="text-sm font-medium">{option.label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {option.description}
-                </span>
-              </div>
+              <div className={cn('size-2 rounded-full', option.dotColor)} />
+              <span className="text-sm">{option.label}</span>
               {status.operationalStatus === option.value && (
-                <CheckCircle className="size-4 text-green-500 ml-auto" />
+                <CheckCircle className="size-3 ml-auto text-green-600 flex-shrink-0" />
               )}
             </DropdownMenuItem>
           ))}
-
-          {status.hasManualOverride && (
-            <>
-              <DropdownMenuSeparator />
-              <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/50">
-                Manual override active until {status.overrideExpiresAt ? new Date(status.overrideExpiresAt).toLocaleTimeString() : 'unknown'}
-              </div>
-            </>
-          )}
         </DropdownMenuContent>
-      </DropdownMenu>
+      )}
+    </DropdownMenu>
+  )
 
-      {/* Toast Notification */}
+  // If user can't edit, wrap in tooltip
+  if (!canEditStatus) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative">
+              {trigger}
+              <div className="absolute -top-1 -right-1 flex items-center justify-center size-4 rounded-full bg-red-500/20 border border-red-500/50">
+                <Lock className="size-2.5 text-red-500" />
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            <p>You do not have permission to change restaurant status.</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+  }
+
+  return (
+    <>
+      {dropdownContent}
+
+      {/* Permission Error Toast */}
+      {showPermissionError && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="px-4 py-3 rounded-lg border bg-red-500/10 border-red-500/30 flex items-center gap-2">
+            <AlertCircle className="size-4 text-red-500" />
+            <span className="text-sm font-medium">
+              You do not have permission to change restaurant status.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Toast */}
       {showToast && (
         <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className={cn(
-            'px-4 py-3 rounded-lg border flex items-center gap-2',
-            toastError
-              ? 'bg-red-500/10 border-red-500/30'
-              : currentStatus?.bgColor
-          )}>
-            {toastError ? (
-              <AlertCircle className="size-4 text-red-500" />
-            ) : currentStatus ? (
-              <currentStatus.icon className={cn('size-4', currentStatus.color)} />
-            ) : null}
-            <span className="text-sm font-medium">{toastMessage}</span>
+          <div
+            className={cn(
+              'px-4 py-3 rounded-lg border',
+              toastType === 'error'
+                ? 'bg-red-500/10 border-red-500/30'
+                : 'bg-green-500/10 border-green-500/30'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              {toastType === 'error' ? (
+                <AlertCircle className="size-4 text-red-500 flex-shrink-0" />
+              ) : (
+                <CheckCircle className="size-4 text-green-500 flex-shrink-0" />
+              )}
+              <span className="text-sm font-medium">{toastMessage}</span>
+            </div>
           </div>
         </div>
       )}

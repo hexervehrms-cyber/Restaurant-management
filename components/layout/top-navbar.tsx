@@ -131,70 +131,58 @@ export function TopNavbar({ title, subtitle, branchId, restaurantId }: TopNavbar
 
           {/* Theme toggle */}
           <style>{`
-            @keyframes sun-rotate-fade-out {
+            @keyframes icon-rotate-to-dark {
               from {
                 opacity: 1;
                 transform: rotate(0deg);
               }
               to {
-                opacity: 0;
+                opacity: 1;
                 transform: rotate(180deg);
               }
             }
-            @keyframes moon-fade-in {
-              from {
-                opacity: 0;
-                transform: rotate(-180deg);
-              }
-              to {
-                opacity: 1;
-                transform: rotate(0deg);
-              }
-            }
-            @keyframes sun-fade-in {
-              from {
-                opacity: 0;
-                transform: rotate(180deg);
-              }
-              to {
-                opacity: 1;
-                transform: rotate(0deg);
-              }
-            }
-            @keyframes moon-rotate-fade-out {
+            @keyframes icon-rotate-to-light {
               from {
                 opacity: 1;
                 transform: rotate(0deg);
               }
               to {
-                opacity: 0;
+                opacity: 1;
                 transform: rotate(-180deg);
               }
             }
-            .theme-icon-to-dark {
-              animation: sun-rotate-fade-out 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            @keyframes theme-fade-in {
+              from {
+                opacity: 0;
+              }
+              to {
+                opacity: 1;
+              }
             }
-            .theme-icon-moon-enter {
-              animation: moon-fade-in 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            .theme-icon-rotating {
+              animation: icon-rotate-to-dark 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
             }
-            .theme-icon-to-light {
-              animation: moon-rotate-fade-out 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            .theme-icon-rotating-reverse {
+              animation: icon-rotate-to-light 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
             }
-            .theme-icon-sun-enter {
-              animation: sun-fade-in 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            @media (prefers-reduced-motion: reduce) {
+              .theme-icon-rotating,
+              .theme-icon-rotating-reverse {
+                animation: none;
+              }
             }
           `}</style>
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 transition-all duration-200 hover:bg-muted/70"
+            className="size-8 transition-all duration-300 hover:bg-muted/70 active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={toggleTheme}
             title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
             {theme === 'dark' ? (
-              <Sun key="sun" className="size-4 theme-icon-sun-enter" />
+              <Sun key="sun" className="size-4 theme-icon-rotating" />
             ) : (
-              <Moon key="moon" className="size-4 theme-icon-moon-enter" />
+              <Moon key="moon" className="size-4 theme-icon-rotating-reverse" />
             )}
           </Button>
         </div>
