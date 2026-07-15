@@ -7,16 +7,14 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, UtensilsCrossed, TableProperties, CalendarDays,
   ChefHat, ShoppingCart, BarChart3, Package, Users, Settings,
-  CreditCard, Zap, ChevronDown, Building2, ChevronRight, PanelLeftClose,
+  CreditCard, Zap, ChevronDown, Building2, ChevronRight, ChevronLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
-  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
-  SidebarMenuItem, useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -26,7 +24,6 @@ import { useAuth } from '@/context/AuthContext'
 
 /**
  * Sign Out Menu Item
- * Handles logout and redirect to login page
  */
 function SignOutMenuItem() {
   const router = useRouter()
@@ -57,58 +54,32 @@ function SignOutMenuItem() {
 }
 
 /**
- * Premium Location Switcher Component
- * Displays current restaurant/branch with branded styling and hover effects
+ * Minimal Live Indicator (Slack/Linear style)
  */
-function PremiumLocationSwitcher() {
+function LiveIndicator() {
   return (
-    <div className="rounded-xl bg-gradient-to-br from-primary/8 via-primary/5 to-transparent border border-primary/15 p-3 space-y-2">
-      {/* Badge */}
-      <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-primary/10 w-fit">
-        <div className="size-2 rounded-full bg-primary" />
-        <span className="text-xs font-medium text-primary">Premium Account</span>
-      </div>
-
-      {/* Location Info */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Building2 className="size-4 text-primary/60" />
-          <span className="font-semibold text-sm text-foreground">Spice Garden</span>
-        </div>
-        <p className="text-xs text-muted-foreground pl-6">Mumbai Central Branch</p>
-      </div>
+    <div className="flex items-center gap-1.5">
+      <span className="size-1.5 rounded-full bg-success animate-pulse" />
+      <span className="text-xs text-muted-foreground font-medium">Live</span>
     </div>
   )
 }
 
 /**
- * Premium Live Indicator Component
- * Shows active status with animated pulse
+ * Counter Badge
  */
-function PremiumLiveIndicator() {
+function CounterBadge({ count }: { count: string }) {
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/10 border border-success/20">
-      <span className="size-2 rounded-full bg-success animate-pulse" />
-      <span className="text-xs font-medium text-success/80">Live</span>
-    </div>
-  )
-}
-
-/**
- * Premium Counter Badge Component
- * Shows count with subtle styling
- */
-function PremiumCountBadge({ count }: { count: string }) {
-  return (
-    <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-md text-xs font-semibold bg-muted text-foreground ring-1 ring-border/40">
+    <div className="inline-flex items-center justify-center size-5 rounded-full text-xs font-semibold bg-muted text-foreground">
       {count}
-    </span>
+    </div>
   )
 }
 
+// Navigation groups
 const navGroups = [
   {
-    label: 'Operations',
+    label: 'Restaurant',
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
       { label: 'POS Terminal', href: '/pos', icon: ShoppingCart, badge: 'Live' },
@@ -134,15 +105,23 @@ const navGroups = [
       { label: 'Staff', href: '/staff', icon: Users },
     ],
   },
+  {
+    label: 'Administration',
+    items: [
+      { label: 'Settings', href: '/settings', icon: Settings },
+    ],
+  },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { toggleSidebar, state: sidebarState } = useSidebar()
+  const isCollapsed = sidebarState === 'collapsed'
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    Operations: true,
+    Restaurant: true,
     Kitchen: true,
     Business: true,
+    Administration: true,
   })
 
   const toggleGroup = (label: string) => {
@@ -155,110 +134,85 @@ export function AppSidebar() {
   return (
     <Sidebar 
       collapsible="icon" 
-      className={cn(
-        "border-r border-border/40 bg-background",
-        "shadow-[inset_1px_0_0_0_rgba(255,255,255,0.05)]"
-      )}
+      className="border-r border-border/40 bg-background"
     >
-      {/* Premium Header Section */}
+      {/* Workspace Header with Restaurant Card */}
       <SidebarHeader className={cn(
-        "border-b border-border/30 px-4 py-4 gap-3",
-        "transition-all duration-300",
-        "group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3"
+        "border-b border-border/30 px-4 py-3 gap-0",
+        "transition-all duration-300"
       )}>
-        {/* Premium Location Switcher - Hidden when collapsed */}
-        <div className={cn(
-          "transition-all duration-300 overflow-hidden",
-          "group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0"
-        )}>
-          <PremiumLocationSwitcher />
-        </div>
+        {/* Restaurant Card */}
+        <button
+          onClick={toggleSidebar}
+          className={cn(
+            "flex items-center gap-3 px-3 py-3 rounded-lg border border-border/30",
+            "bg-gradient-to-br from-primary/8 via-primary/5 to-transparent",
+            "hover:bg-muted/40 transition-all duration-200",
+            "group text-left w-full"
+          )}
+          title={isCollapsed ? 'Expand' : 'Collapse'}
+        >
+          {/* Restaurant Icon */}
+          <div className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0 transition-all duration-200">
+            <Building2 className="size-4" />
+          </div>
 
-        {/* Collapse Button */}
-        <div className="pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full h-9 rounded-lg gap-2 justify-center",
-              "hover:bg-muted/60 transition-all duration-200",
-              "group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:p-0"
-            )}
-            onClick={toggleSidebar}
-            title={sidebarState === 'expanded' ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            <PanelLeftClose className={cn(
-              "size-4 transition-transform duration-300 flex-shrink-0",
-              sidebarState === 'collapsed' && "rotate-180"
-            )} />
-            <span className={cn(
-              "text-xs font-medium transition-all duration-300 overflow-hidden",
-              "group-data-[collapsible=icon]:hidden"
-            )}>
-              {sidebarState === 'expanded' ? 'Collapse' : 'Expand'}
-            </span>
-          </Button>
-        </div>
+          {/* Restaurant Info (Hidden when collapsed) */}
+          {!isCollapsed && (
+            <>
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <h2 className="font-semibold text-sm text-foreground truncate">Spice Garden</h2>
+                <p className="text-xs text-muted-foreground truncate">Mumbai Central</p>
+              </div>
+
+              {/* Collapse Chevron */}
+              <ChevronLeft className="size-4 text-muted-foreground/50 shrink-0 transition-transform duration-200 group-hover:text-muted-foreground" />
+            </>
+          )}
+
+          {/* Collapsed State - Only Icon */}
+          {isCollapsed && (
+            <ChevronRight className="size-4 text-muted-foreground/50 absolute right-3 transition-transform duration-200" />
+          )}
+        </button>
       </SidebarHeader>
 
-      {/* Premium Navigation Content */}
+      {/* Navigation Content */}
       <SidebarContent className={cn(
-        "gap-6 py-6 px-3",
-        "transition-all duration-300",
-        "group-data-[collapsible=icon]:px-1"
+        "gap-4 py-4 px-2",
+        "transition-all duration-300"
       )}>
         {navGroups.map((group) => {
           const isExpanded = expandedGroups[group.label] !== false
 
           return (
-            <div key={group.label} className={cn(
-              "space-y-3 transition-all duration-300",
-              "group-data-[collapsible=icon]:space-y-2"
-            )}>
-              {/* Group Header with Toggle - Hidden when collapsed */}
-              <div className={cn(
-                "flex items-center justify-between px-3 group/header",
-                "transition-all duration-300 overflow-hidden",
-                "group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:px-0"
-              )}>
-                <div className="space-y-0.5">
-                  <h3 className={cn(
-                    "text-xs font-bold uppercase tracking-widest",
-                    "text-muted-foreground/70 transition-colors duration-200"
-                  )}>
+            <div key={group.label} className="space-y-2">
+              {/* Group Label (Hidden when collapsed) */}
+              {!isCollapsed && (
+                <div className="flex items-center justify-between px-3 h-7 group/label">
+                  <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide">
                     {group.label}
-                  </h3>
-                  <div className={cn(
-                    "h-0.5 bg-gradient-to-r from-primary/40 to-transparent",
-                    "transition-all duration-200",
-                    !isExpanded && "opacity-0"
-                  )} />
+                  </p>
+                  <button
+                    onClick={() => toggleGroup(group.label)}
+                    className="opacity-0 group-hover/label:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted/40"
+                    title={isExpanded ? 'Collapse' : 'Expand'}
+                  >
+                    <ChevronRight 
+                      className={cn(
+                        "size-3.5 text-muted-foreground/60 transition-transform duration-200",
+                        isExpanded && "rotate-90"
+                      )} 
+                    />
+                  </button>
                 </div>
-
-                {/* Chevron Toggle */}
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  className={cn(
-                    "p-1 rounded-md transition-all duration-200",
-                    "hover:bg-muted/60 opacity-0 group-hover/header:opacity-100"
-                  )}
-                  title={isExpanded ? 'Collapse section' : 'Expand section'}
-                >
-                  <ChevronRight 
-                    className={cn(
-                      "size-4 text-muted-foreground/60 transition-transform duration-300",
-                      isExpanded && "rotate-90"
-                    )} 
-                  />
-                </button>
-              </div>
+              )}
 
               {/* Navigation Items */}
               {isExpanded && (
                 <div className={cn(
-                  "space-y-1 pl-2",
-                  "transition-all duration-300",
-                  "group-data-[collapsible=icon]:pl-0"
+                  "space-y-1",
+                  isCollapsed && "flex flex-col items-center"
                 )}>
                   {group.items.map((item) => {
                     const isActive = pathname === item.href
@@ -269,46 +223,43 @@ export function AppSidebar() {
                         href={item.href}
                         title={item.label}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                          "transition-all duration-200 group/item relative",
-                          "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
+                          "flex items-center gap-3 px-3 py-2.5 h-9 rounded-lg text-sm",
+                          "transition-all duration-200 group/nav relative",
+                          isCollapsed && "justify-center px-2 w-9 h-9",
                           isActive
-                            ? "bg-primary/12 text-primary"
+                            ? "bg-primary/12 text-primary font-medium"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                         )}
                       >
-                        {/* Active Indicator - Left Bar */}
-                        {isActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-lg transition-all duration-200" />
+                        {/* Left accent bar for active (not shown when collapsed) */}
+                        {isActive && !isCollapsed && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r" />
                         )}
 
                         {/* Icon */}
                         <item.icon className={cn(
-                          "size-5 shrink-0 transition-all duration-200",
-                          isActive ? "text-primary" : "text-muted-foreground group-hover/item:text-foreground"
+                          "size-4 shrink-0 transition-colors",
+                          isActive ? "text-primary" : "text-muted-foreground group-hover/nav:text-foreground"
                         )} />
 
-                        {/* Label - Hidden when collapsed */}
-                        <span className={cn(
-                          "flex-1 text-sm font-medium transition-all duration-300 overflow-hidden whitespace-nowrap",
-                          "group-data-[collapsible=icon]:hidden",
-                          isActive && "font-semibold"
-                        )}>
-                          {item.label}
-                        </span>
+                        {/* Label (Hidden when collapsed) */}
+                        {!isCollapsed && (
+                          <>
+                            <span className="flex-1 min-w-0 truncate">
+                              {item.label}
+                            </span>
 
-                        {/* Badge - Hidden when collapsed */}
-                        {item.badge && (
-                          <div className={cn(
-                            "ml-auto transition-all duration-300 overflow-hidden",
-                            "group-data-[collapsible=icon]:hidden"
-                          )}>
-                            {item.badge === 'Live' ? (
-                              <PremiumLiveIndicator />
-                            ) : (
-                              <PremiumCountBadge count={item.badge} />
+                            {/* Status/Count Badge (Right-aligned) */}
+                            {item.badge && (
+                              <div className="ml-auto shrink-0">
+                                {item.badge === 'Live' ? (
+                                  <LiveIndicator />
+                                ) : (
+                                  <CounterBadge count={item.badge} />
+                                )}
+                              </div>
                             )}
-                          </div>
+                          </>
                         )}
                       </Link>
                     )
@@ -320,86 +271,63 @@ export function AppSidebar() {
         })}
       </SidebarContent>
 
-      {/* Premium Footer Section */}
+      {/* User Profile Section */}
       <SidebarFooter className={cn(
-        "border-t border-border/30 px-4 py-4 gap-3",
-        "transition-all duration-300",
-        "group-data-[collapsible=icon]:px-2"
+        "border-t border-border/30 p-2",
+        "transition-all duration-300"
       )}>
-        {/* Settings Item */}
-        <Link
-          href="/settings"
-          title="Settings"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg",
-            "transition-all duration-200 group/settings relative",
-            "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
-            pathname === '/settings'
-              ? "bg-primary/12 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-          )}
-        >
-          {pathname === '/settings' && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-lg transition-all duration-200" />
-          )}
-          <Settings className={cn(
-            "size-5 shrink-0 transition-all duration-200",
-            pathname === '/settings' ? "text-primary" : "text-muted-foreground group-hover/settings:text-foreground"
-          )} />
-          <span className={cn(
-            "flex-1 text-sm font-medium transition-all duration-300 overflow-hidden whitespace-nowrap",
-            "group-data-[collapsible=icon]:hidden",
-            pathname === '/settings' && "font-semibold"
-          )}>
-            Settings
-          </span>
-        </Link>
-
-        {/* User Profile Section */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg",
+              "flex items-center gap-3 px-3 py-2.5 h-10 rounded-lg",
               "transition-all duration-200 group/user",
-              "hover:bg-muted/40",
-              "group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+              "hover:bg-muted/40 w-full",
+              isCollapsed && "justify-center px-2 w-10 h-10"
             )}>
               <Avatar className={cn(
-                "size-8 shrink-0 ring-2 ring-primary/20",
-                "group-hover/user:ring-primary/40 transition-all duration-200",
-                "group-data-[collapsible=icon]:size-6"
+                "shrink-0 ring-2 ring-border/40 transition-all duration-200",
+                isCollapsed ? "size-6" : "size-8"
               )}>
                 <AvatarFallback className="bg-primary/15 text-primary font-semibold text-xs">
                   RS
                 </AvatarFallback>
               </Avatar>
-              <div className={cn(
-                "flex flex-col gap-0.5 leading-none min-w-0 text-left flex-1",
-                "transition-all duration-300 overflow-hidden",
-                "group-data-[collapsible=icon]:hidden"
-              )}>
-                <span className="text-sm font-medium text-foreground">Rajesh Sharma</span>
-                <span className="text-xs text-muted-foreground">Owner</span>
-              </div>
-              <ChevronDown className={cn(
-                "size-4 text-muted-foreground/50 shrink-0",
-                "transition-all duration-300 overflow-hidden",
-                "group-data-[collapsible=icon]:hidden"
-              )} />
+              {!isCollapsed && (
+                <>
+                  <div className="flex flex-col gap-0.5 min-w-0 text-left flex-1">
+                    <span className="text-sm font-medium text-foreground truncate">Rajesh Sharma</span>
+                    <span className="text-xs text-muted-foreground truncate">Owner</span>
+                  </div>
+                  <ChevronDown className="size-4 text-muted-foreground/50 shrink-0" />
+                </>
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="start" side="top">
-            <div className="px-2 py-1.5 text-sm">
-              <p className="font-medium text-foreground">Rajesh Sharma</p>
-              <p className="text-xs text-muted-foreground">owner@spicegarden.com</p>
+            {/* User Header */}
+            <div className="px-2 py-2 space-y-1">
+              <p className="text-sm font-semibold text-foreground">Rajesh Sharma</p>
+              <p className="text-xs text-muted-foreground">Owner</p>
             </div>
+
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2">
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2">
-              Account Settings
-            </DropdownMenuItem>
+
+            {/* Current Branch */}
+            <div className="px-2 py-2 space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Current Branch
+              </p>
+              <p className="text-sm text-foreground">Mumbai Central</p>
+              <button className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors mt-1">
+                Change Branch →
+              </button>
+            </div>
+
+            <DropdownMenuSeparator />
+
+            {/* Account Options */}
+            <DropdownMenuItem className="text-sm">Profile</DropdownMenuItem>
+            <DropdownMenuItem className="text-sm">Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <SignOutMenuItem />
           </DropdownMenuContent>
