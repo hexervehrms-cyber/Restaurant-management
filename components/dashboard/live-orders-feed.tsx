@@ -1,10 +1,11 @@
 'use client'
 
-import { Clock, Zap } from 'lucide-react'
+import { Loader2, AlertTriangle, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { liveOrders } from '@/lib/mock-data'
+import { useLiveOrders } from '@/hooks/useLiveOrders'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const statusConfig = {
@@ -22,6 +23,68 @@ const priorityDot = {
 }
 
 export function LiveOrdersFeed() {
+  const { userProfile } = useAuth()
+  const branchId = userProfile?.branchId
+  const { data: ordersData, loading, error } = useLiveOrders(branchId)
+
+  // Extract the orders array from the response object, default to empty array
+  const orders = ordersData?.orders || []
+  const activeOrdersCount = orders.length
+
+  if (!branchId) {
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-3 shrink-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Zap className="size-4 text-warning" />
+            Live Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertTriangle className="size-4" />
+            Branch information not available
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading && !orders.length) {
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-3 shrink-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Zap className="size-4 text-warning" />
+            Live Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 pt-6 flex items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error && !orders.length) {
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-3 shrink-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Zap className="size-4 text-warning" />
+            Live Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertTriangle className="size-4" />
+            {error.message}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="pb-3 shrink-0">
@@ -32,15 +95,15 @@ export function LiveOrdersFeed() {
           </CardTitle>
           <Badge variant="secondary" className="text-xs gap-1">
             <span className="size-1.5 rounded-full bg-success animate-pulse" />
-            {liveOrders.length} active
+            {activeOrdersCount} active
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="flex-1 pt-0 min-h-0">
         <ScrollArea className="h-[340px]">
           <div className="flex flex-col gap-2.5 pr-3">
-            {liveOrders.map((order) => {
-              const config = statusConfig[order.status]
+            {orders.map((order) => {
+              const config = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending
               return (
                 <div
                   key={order.id}
@@ -49,7 +112,7 @@ export function LiveOrdersFeed() {
                   {/* Header row */}
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
-                      <span className={cn('size-2 shrink-0 rounded-full', priorityDot[order.priority])} />
+                      <span className={cn('size-2 shrink-0 rounded-full', priorityDot[order.priority as keyof typeof priorityDot] || priorityDot.normal)} />
                       <span className="text-xs font-semibold">{order.id}</span>
                       <span className="text-xs text-muted-foreground">· T{order.tableNumber}</span>
                     </div>
@@ -63,13 +126,13 @@ export function LiveOrdersFeed() {
 
                   {/* Items */}
                   <div className="flex flex-col gap-0.5 mb-2">
-                    {order.items.slice(0, 2).map((item) => (
-                      <p key={item.id} className="text-xs text-muted-foreground">
+                    {order.items?.slice(0, 2).map((item, idx) => (
+                      <p key={idx} className="text-xs text-muted-foreground">
                         {item.quantity}× {item.name}
                         {item.notes && <span className="text-warning/80"> · {item.notes}</span>}
                       </p>
                     ))}
-                    {order.items.length > 2 && (
+                    {order.items && order.items.length > 2 && (
                       <p className="text-xs text-muted-foreground">
                         +{order.items.length - 2} more items
                       </p>
@@ -77,14 +140,11 @@ export function LiveOrdersFeed() {
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="size-3" />
-                      <span>{order.ticketTime}m ago</span>
-                      <span className="text-muted-foreground/50">·</span>
-                      <span>{order.waiter}</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="text-muted-foreground flex items-center gap-1">
+                      <span>{order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : 'N/A'}</span>
                     </div>
-                    <span className="text-xs font-semibold">₹{order.total.toLocaleString('en-IN')}</span>
+                    <span className="font-semibold">₹{typeof order.total === 'number' ? order.total.toLocaleString('en-IN') : '0'}</span>
                   </div>
                 </div>
               )

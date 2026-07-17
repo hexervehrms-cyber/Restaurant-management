@@ -1,11 +1,12 @@
 'use client'
 
-import { Users } from 'lucide-react'
+import { Loader2, AlertTriangle, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { tables } from '@/lib/mock-data'
+import { useTables } from '@/hooks/useTables'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -26,17 +27,63 @@ const statusLabel = {
 }
 
 export function TableOccupancyGrid() {
+  const { userProfile } = useAuth()
+  const branchId = userProfile?.branchId
+  const { data: tablesData, loading, error } = useTables(branchId)
+
+  // Safely extract tables array, default to empty array if null
+  const tables = tablesData || []
+
+  if (!branchId) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertTriangle className="size-4" />
+            Branch information not available
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading && !tables.length) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold">Table Occupancy</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-48">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error && !tables.length) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertTriangle className="size-4" />
+            {error.message}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const grouped = {
-    indoor: tables.filter((t) => t.section === 'indoor'),
-    outdoor: tables.filter((t) => t.section === 'outdoor'),
-    vip: tables.filter((t) => t.section === 'vip'),
+    indoor: tables.filter((t: any) => t.section === 'indoor'),
+    outdoor: tables.filter((t: any) => t.section === 'outdoor'),
+    vip: tables.filter((t: any) => t.section === 'vip'),
   }
 
   const counts = {
-    available: tables.filter((t) => t.status === 'available').length,
-    occupied: tables.filter((t) => t.status === 'occupied').length,
-    reserved: tables.filter((t) => t.status === 'reserved').length,
-    cleaning: tables.filter((t) => t.status === 'cleaning').length,
+    available: tables.filter((t: any) => t.status === 'available').length,
+    occupied: tables.filter((t: any) => t.status === 'occupied').length,
+    reserved: tables.filter((t: any) => t.status === 'reserved').length,
+    cleaning: tables.filter((t: any) => t.status === 'cleaning').length,
   }
 
   return (
@@ -72,19 +119,19 @@ export function TableOccupancyGrid() {
 
       <CardContent className="pt-0">
         <div className="flex flex-col gap-4">
-          {(Object.entries(grouped) as [string, typeof tables][]).map(([section, sectionTables]) => (
+          {(Object.entries(grouped) as [string, any[]][]).map(([section, sectionTables]) => (
             <div key={section}>
               <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-2">
                 {section === 'vip' ? 'VIP Rooms' : `${section.charAt(0).toUpperCase() + section.slice(1)} Dining`}
               </p>
               <div className="flex flex-wrap gap-2">
-                {sectionTables.map((table) => (
+                {sectionTables.map((table: any) => (
                   <Tooltip key={table.id}>
                     <TooltipTrigger
                       className={cn(
                         'flex flex-col items-center justify-center rounded-xl border p-2 transition-all cursor-pointer',
                         'min-w-[60px] h-14',
-                        statusStyle[table.status]
+                        statusStyle[table.status as keyof typeof statusStyle] || statusStyle.available
                       )}
                     >
                       <span className="text-xs font-bold leading-none">{table.number}</span>
@@ -96,7 +143,7 @@ export function TableOccupancyGrid() {
                     <TooltipContent side="top" className="text-xs max-w-[160px]">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-semibold">Table {table.number}</span>
-                        <span>{statusLabel[table.status]}</span>
+                        <span>{statusLabel[table.status as keyof typeof statusLabel]}</span>
                         {table.waiter && <span>Waiter: {table.waiter}</span>}
                         {table.occupiedSince && <span>Since: {table.occupiedSince}</span>}
                         {table.guestCount && <span>Guests: {table.guestCount}/{table.capacity}</span>}

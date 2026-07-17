@@ -5,9 +5,7 @@
 
 import { apiGet, apiPatch } from '@/lib/api/client'
 import type {
-  DashboardSummary,
   RevenueChartData,
-  SidebarCounts,
   RestaurantStatus,
   DashboardHeader,
   RestaurantOperationalStatus,
@@ -21,32 +19,11 @@ import type { SuccessResponse } from '@/types/api'
 export async function getDashboardHeader(
   branchId: string
 ): Promise<DashboardHeader> {
-  const response = await apiGet<SuccessResponse<DashboardHeader>>(
-    `/dashboard/header?branchId=${branchId}`
+  const response = await apiGet<DashboardHeader>(
+    `/api/dashboard/header?branchId=${branchId}`
   )
 
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
-}
-
-/**
- * Get dashboard summary statistics
- */
-export async function getDashboardSummary(
-  branchId: string
-): Promise<DashboardSummary> {
-  const response = await apiGet<SuccessResponse<DashboardSummary>>(
-    `/dashboard/summary?branchId=${branchId}&date=today`
-  )
-
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
+  return response
 }
 
 /**
@@ -56,45 +33,22 @@ export async function getRevenueChart(
   branchId: string,
   range: 'today' | 'week' = 'today'
 ): Promise<RevenueChartData> {
-  const response = await apiGet<SuccessResponse<RevenueChartData>>(
-    `/dashboard/revenue-chart?branchId=${branchId}&range=${range}`
+  const response = await apiGet<RevenueChartData>(
+    `/api/dashboard/revenue-chart?branchId=${branchId}&range=${range}`
   )
 
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
-}
-
-/**
- * Get sidebar badge counts
- */
-export async function getSidebarCounts(branchId: string): Promise<SidebarCounts> {
-  const response = await apiGet<SuccessResponse<SidebarCounts>>(
-    `/dashboard/sidebar-counts?branchId=${branchId}`
-  )
-
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
+  return response
 }
 
 /**
  * Get current restaurant status
  */
 export async function getRestaurantStatus(branchId: string): Promise<RestaurantStatus> {
-  const response = await apiGet<SuccessResponse<RestaurantStatus>>(
-    `/restaurants/current-status?branchId=${branchId}`
+  const response = await apiGet<RestaurantStatus>(
+    `/api/restaurants/current-status?branchId=${branchId}`
   )
 
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
+  return response
 }
 
 /**
@@ -102,14 +56,11 @@ export async function getRestaurantStatus(branchId: string): Promise<RestaurantS
  */
 export async function getNotifications(limit: number = 10) {
   const response = await apiGet<any>(
-    `/notifications?limit=${limit}`
+    `/api/notifications?limit=${limit}`
   )
 
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data.notifications
+  // Response is directly the notifications array from extractApiData
+  return Array.isArray(response) ? response : response.notifications || []
 }
 
 /**
@@ -119,15 +70,11 @@ export async function getOperationalStatus(
   branchId: string,
   restaurantId: string
 ): Promise<RestaurantOperationalStatus> {
-  const response = await apiGet<SuccessResponse<RestaurantOperationalStatus>>(
-    `/dashboard/status?branchId=${branchId}&restaurantId=${restaurantId}`
+  const response = await apiGet<RestaurantOperationalStatus>(
+    `/api/dashboard/status?branchId=${branchId}&restaurantId=${restaurantId}`
   )
 
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
+  return response
 }
 
 /**
@@ -144,8 +91,8 @@ export async function updateOperationalStatus(
   operationalStatus: string,
   overrideDurationMinutes?: number
 ): Promise<RestaurantOperationalStatus> {
-  const response = await apiPatch<SuccessResponse<RestaurantOperationalStatus>>(
-    `/dashboard/status`,
+  const response = await apiPatch<RestaurantOperationalStatus>(
+    `/api/dashboard/status`,
     {
       branchId,
       restaurantId,
@@ -154,9 +101,5 @@ export async function updateOperationalStatus(
     }
   )
 
-  if (!response.success) {
-    throw new Error(response.message)
-  }
-
-  return response.data
+  return response
 }

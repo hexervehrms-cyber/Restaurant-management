@@ -1,145 +1,78 @@
 /**
- * API Client Setup
- * Centralized HTTP client for all API calls
+ * API Client Wrapper
+ * Delegates to the authenticated apiClient in lib/api-client.ts
+ * These are convenience functions that match the old API
+ * 
+ * IMPORTANT: Now uses authenticated Firebase tokens for all requests
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api'
+import { apiClient as authenticatedApiClient, extractApiData } from '@/lib/api-client'
 
 export interface FetchOptions extends RequestInit {
   timeout?: number
 }
 
 /**
- * Fetch wrapper with error handling
+ * GET request helper - delegates to authenticated client
  */
-export async function apiClient<T>(
-  endpoint: string,
-  options: FetchOptions = {}
-): Promise<T> {
-  const { timeout = 30000, ...fetchOptions } = options
-
-  const url = `${API_BASE_URL}${endpoint}`
-
-  // Add default headers
-  const headers = {
-    'Content-Type': 'application/json',
-    ...fetchOptions.headers,
-  }
-
-  // Add authentication token if available
-  // TODO: Add JWT token from localStorage or auth context
-  // if (token) {
-  //   headers.Authorization = `Bearer ${token}`
-  // }
-
-  try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      throw new ApiError(
-        response.status,
-        response.statusText,
-        `API request failed: ${response.statusText}`
-      )
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error
-    }
-
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new ApiError(
-        408,
-        'REQUEST_TIMEOUT',
-        'Request timeout'
-      )
-    }
-
-    throw new ApiError(
-      500,
-      'NETWORK_ERROR',
-      error instanceof Error ? error.message : 'Network error'
-    )
-  }
-}
-
-/**
- * GET request helper
- */
-export function apiGet<T>(endpoint: string, options?: FetchOptions): Promise<T> {
-  return apiClient<T>(endpoint, {
-    ...options,
-    method: 'GET',
+export async function apiGet<T>(endpoint: string, options?: FetchOptions): Promise<T> {
+  const response = await authenticatedApiClient.get(endpoint, undefined, {
+    timeout: options?.timeout,
   })
+  return extractApiData<T>(response)
 }
 
 /**
- * POST request helper
+ * POST request helper - delegates to authenticated client
  */
-export function apiPost<T>(
+export async function apiPost<T>(
   endpoint: string,
   data?: any,
   options?: FetchOptions
 ): Promise<T> {
-  return apiClient<T>(endpoint, {
-    ...options,
-    method: 'POST',
-    body: data ? JSON.stringify(data) : undefined,
+  const response = await authenticatedApiClient.post(endpoint, data, {
+    timeout: options?.timeout,
   })
+  return extractApiData<T>(response)
 }
 
 /**
- * PUT request helper
+ * PUT request helper - delegates to authenticated client
  */
-export function apiPut<T>(
+export async function apiPut<T>(
   endpoint: string,
   data?: any,
   options?: FetchOptions
 ): Promise<T> {
-  return apiClient<T>(endpoint, {
-    ...options,
-    method: 'PUT',
-    body: data ? JSON.stringify(data) : undefined,
+  const response = await authenticatedApiClient.patch(endpoint, data, {
+    timeout: options?.timeout,
   })
+  return extractApiData<T>(response)
 }
 
 /**
- * PATCH request helper
+ * PATCH request helper - delegates to authenticated client
  */
-export function apiPatch<T>(
+export async function apiPatch<T>(
   endpoint: string,
   data?: any,
   options?: FetchOptions
 ): Promise<T> {
-  return apiClient<T>(endpoint, {
-    ...options,
-    method: 'PATCH',
-    body: data ? JSON.stringify(data) : undefined,
+  const response = await authenticatedApiClient.patch(endpoint, data, {
+    timeout: options?.timeout,
   })
+  return extractApiData<T>(response)
 }
 
 /**
- * DELETE request helper
+ * DELETE request helper - delegates to authenticated client
  */
-export function apiDelete<T>(endpoint: string, options?: FetchOptions): Promise<T> {
-  return apiClient<T>(endpoint, {
-    ...options,
-    method: 'DELETE',
+export async function apiDelete<T>(endpoint: string, options?: FetchOptions): Promise<T> {
+  const response = await authenticatedApiClient.delete(endpoint, {
+    timeout: options?.timeout,
   })
+  return extractApiData<T>(response)
 }
-
 /**
  * Custom API Error class
  */
